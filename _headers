@@ -1,29 +1,18 @@
-// Self-destroying service worker.
-//
-// If an earlier version of the site ever registered a service worker at /sw.js,
-// that old worker can keep serving a cached (old) copy of the app forever — which
-// is the usual reason a freshly uploaded version "reverts" on every open/refresh.
-//
-// This file replaces it with a worker that deletes all caches, unregisters itself,
-// and reloads any open tabs so they pull the live files. Once it has run there is
-// no service worker left, so the app is always served fresh.
-//
-// Upload this as /sw.js alongside index.html. It is harmless if no old worker exists.
+## Netlify headers — stop the app pages from ever being served stale.
+## Put this file (named exactly "_headers", no extension) in the same folder
+## you upload to Netlify, alongside index.html and admin.html.
 
-self.addEventListener('install', function () {
-  self.skipWaiting();
-});
+/
+  Cache-Control: no-store, max-age=0, must-revalidate
 
-self.addEventListener('activate', function (event) {
-  event.waitUntil((async function () {
-    try {
-      var keys = await caches.keys();
-      await Promise.all(keys.map(function (k) { return caches.delete(k); }));
-    } catch (e) {}
-    try { await self.registration.unregister(); } catch (e) {}
-    try {
-      var clients = await self.clients.matchAll({ type: 'window' });
-      clients.forEach(function (c) { try { c.navigate(c.url); } catch (e) {} });
-    } catch (e) {}
-  })());
-});
+/index.html
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/admin.html
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/sw.js
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/.netlify/functions/tour
+  Cache-Control: no-store, max-age=0
