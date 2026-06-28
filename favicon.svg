@@ -1,0 +1,18 @@
+## Netlify headers — stop the app pages from ever being served stale.
+## Put this file (named exactly "_headers", no extension) in the same folder
+## you upload to Netlify, alongside index.html and admin.html.
+
+/
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/admin.html
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/sw.js
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/.netlify/functions/tour
+  Cache-Control: no-store, max-age=0

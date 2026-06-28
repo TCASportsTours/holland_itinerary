@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GCS Itinerary — Admin</title>
+<script>
+/* One-time cleanup: unregister any old service worker and delete caches left by a previous deploy —
+   the usual reason a published update or fresh schedule "won't show". No service worker is used now. */
+(function(){ try{
+  if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); }).catch(function(){}); }
+  if(window.caches && caches.keys){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }).catch(function(){}); }
+}catch(e){} })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,400;0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+<style>
+  :root{
+    --orange:#ff7c1a; --teal:#51cea7; --purple:#7777c9;
+    --ink:#161615; --white:#fff;
+    --bg:#0e0e0d;
+    --surface:#1c1c1a; --surface-2:#232321;
+    --line:rgba(255,255,255,.12);
+    --muted:rgba(255,255,255,.56); --faint:rgba(255,255,255,.38);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Josefin Sans',system-ui,sans-serif}
+  body{background-color:var(--bg);color:#fff;min-height:100vh;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='84'%3E%3Ctext x='2' y='44' font-family='Arial' font-weight='bold' font-style='italic' font-size='30' fill='%23ffffff' fill-opacity='0.025'%3EGCS%3C/text%3E%3C/svg%3E");}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 22px 80px}
+
+  header.top{display:flex;align-items:center;gap:13px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+  header.top img{width:42px;height:42px;object-fit:contain}
+  header.top .t b{font-weight:700;font-style:italic;font-size:22px;display:block;line-height:1}
+  header.top .t span{font-size:12.5px;color:var(--muted)}
+  .saved{margin-left:auto;font-size:11.5px;color:var(--teal);display:flex;align-items:center;gap:6px;opacity:0;transition:.3s}
+  .hdrpub{margin-left:12px;font-size:13px;padding:8px 15px;white-space:nowrap}
+  .btn.primary.clean{opacity:.45;background:var(--surface);color:var(--muted);border-color:var(--line)}
+  .saved.show{opacity:1}
+  .saved i{font-size:15px}
+
+  nav.tabs{display:flex;gap:4px;margin:20px 0 24px;flex-wrap:wrap}
+  nav.tabs button{background:var(--surface);border:1px solid var(--line);color:var(--muted);
+    font-family:inherit;font-weight:600;font-size:13.5px;padding:9px 16px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:7px}
+  nav.tabs button i{font-size:17px}
+  nav.tabs button.active{background:var(--orange);color:#3a1c02;border-color:var(--orange)}
+
+  .panel{display:none}
+  .panel.active{display:block}
+
+  .eyebrow{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);font-weight:600;margin:0 0 10px}
+  .hint{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:18px;max-width:680px}
+
+  .day{margin-bottom:20px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+  .day-head{display:flex;align-items:center;gap:12px;padding:13px 15px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+  .day-head .dn{font-weight:700;font-style:italic;font-size:16px;white-space:nowrap}
+  .day-head input.date{background:var(--bg);border:1px solid var(--line);color:#fff;border-radius:8px;
+    font-family:inherit;font-size:13.5px;padding:7px 11px;width:140px}
+  .day-head .sp{flex:1}
+  .day-body{padding:11px 13px}
+
+  .ev{border-left:4px solid var(--bar,#555);background:var(--bg);border-radius:0 10px 10px 0;padding:11px 12px;margin:9px 0}
+  .ev-grid{display:grid;grid-template-columns:84px 150px 140px 1fr 34px;gap:9px;align-items:center}
+  .ev-grid .wide{grid-column:1 / -1}
+  .ev input, .ev select{background:var(--surface);border:1px solid var(--line);color:#fff;border-radius:8px;
+    font-family:inherit;font-size:13px;padding:8px 10px;width:100%;outline:none}
+  .ev input:focus, .ev select:focus{border-color:var(--teal)}
+  .ev input::placeholder{color:var(--faint)}
+  .ev .del{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;height:34px;cursor:pointer;font-size:18px;line-height:1}
+  .ev .del:hover{color:#ff9d52;border-color:#ff9d52}
+
+  .btn{display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-weight:600;font-size:13px;
+    border-radius:9px;padding:9px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:#fff}
+  .btn:hover{background:var(--surface-2)}
+  .btn.ghost{background:none}
+  .btn.add{border-style:dashed;color:var(--teal);border-color:rgba(81,206,167,.5);width:100%;justify-content:center;margin-top:4px}
+  .btn.primary{background:var(--orange);color:#3a1c02;border-color:var(--orange)}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn i{font-size:16px}
+  .row-actions{display:flex;gap:9px;margin-top:6px}
+
+  /* settings + announcements forms */
+  .field{margin-bottom:15px}
+  .field label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:5px}
+  .field input, .field textarea, .field select{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--line);
+    color:#fff;border-radius:9px;font-family:inherit;font-size:14px;padding:10px 13px;outline:none}
+  .field textarea{min-height:74px;resize:vertical;max-width:680px}
+  .field select{-webkit-appearance:none;appearance:none;cursor:pointer;padding-right:34px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23ffffff' stroke-opacity='.55' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 13px center}
+  .field select:disabled{opacity:.5;cursor:not-allowed}
+  .field option{background:var(--surface);color:#fff}
+  .field input:focus, .field textarea:focus, .field select:focus{border-color:var(--teal)}
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,230px));gap:14px}
+
+  .ann{border:1px solid var(--line);border-radius:13px;background:var(--surface);padding:13px 15px;margin-bottom:12px}
+  .ann .ann-top{display:flex;gap:10px;align-items:center;margin-bottom:9px}
+  .ann .ann-top input{flex:1;max-width:none}
+  .ann textarea{max-width:none}
+
+  pre.preview{background:#000;border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto;
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#bfe9d8;max-height:320px;white-space:pre}
+  .pubrow{display:flex;gap:11px;flex-wrap:wrap;margin:6px 0 20px}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:#000;
+    border:1px solid var(--line);color:#fff;font-size:13px;font-weight:600;padding:11px 18px;border-radius:30px;
+    opacity:0;transition:.25s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:680px){
+    .ev-grid{grid-template-columns:1fr 1fr}
+    .ev-grid .del{grid-column:2;justify-self:end;width:40px}
+    .grid2{grid-template-columns:1fr}
+  }
+</style>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <img src="data:image/png;base64,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" alt="Global Cricket Series">
+    <div class="t"><b>GCS Itinerary — Admin</b><span id="topSub">Barbados 2026 · staff console</span><span style="display:block;font-size:9px;color:#666;letter-spacing:.04em;margin-top:1px">Build 2026‑06‑24u · schedule-venue-name</span></div>
+    <div class="saved" id="saved"><i class="ti ti-check"></i> Saved</div>
+    <button id="hdrPublish" class="btn primary hdrpub" onclick="publishLive()">Publish</button>
+  </header>
+
+  <nav class="tabs">
+    <button class="active" data-p="schedule" onclick="tab('schedule')"><i class="ti ti-calendar-event"></i> Schedule</button>
+    <button data-p="announce" onclick="tab('announce')"><i class="ti ti-speakerphone"></i> Announcements</button>
+    <button data-p="alerts" onclick="tab('alerts')"><i class="ti ti-bell-ringing"></i> Alerts</button>
+    <button data-p="settings" onclick="tab('settings')"><i class="ti ti-settings"></i> Settings</button>
+    <button data-p="publish" onclick="tab('publish')"><i class="ti ti-upload"></i> Publish</button>
+  </nav>
+
+  <!-- SCHEDULE -->
+  <section class="panel active" id="p-schedule">
+    <div class="hint">Each row is one event players see. Set the <b>time</b>, which <b>team</b> it's for (Both shows to everyone), the <b>type</b> (controls the colour), and the details. Changes save automatically — when you're ready, go to <b>Publish</b> to push them to the app.</div>
+    <div class="hint" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:rgba(81,206,167,.08);border:1px solid rgba(81,206,167,.4)">
+      <span style="flex:1;min-width:200px">Build the whole tour from one spreadsheet. <b>Download the template</b>, fill in the tabs (Tour, Teams, Schedule, Games, Squads, Staff, More content, Meals), then <b>upload</b> it here — it fills the schedule, teams, squads, staff, More content and meal menus. Announcements and team logos are kept. A plain CSV still works as a schedule-only import.</span>
+      <button class="btn" onclick="tourTemplate()"><i class="ti ti-download"></i> Download template</button>
+      <input type="file" id="schedFile" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleTourFile(this.files[0]); this.value='';">
+      <button class="btn primary" onclick="document.getElementById('schedFile').click()"><i class="ti ti-upload"></i> Upload tour</button>
+    </div>
+    <div id="days"></div>
+    <button class="btn add" style="margin-top:10px" onclick="addDay()"><i class="ti ti-plus"></i> Add a day</button>
+  </section>
+
+  <!-- ANNOUNCEMENTS -->
+  <section class="panel" id="p-announce">
+    <div class="hint">Legacy notice board. The players&rsquo; app now uses the <b>Alerts</b> tab instead — send messages from the <b>Alerts</b> panel (left), which pop up and are saved in their Alerts tab. Anything added here no longer appears in the app.</div>
+    <div id="anns"></div>
+    <button class="btn add" onclick="addAnn()"><i class="ti ti-plus"></i> Add announcement</button>
+  </section>
+
+  <!-- ALERTS -->
+  <section class="panel" id="p-alerts">
+    <div class="hint">Send a short, urgent message — like &ldquo;Bus running 20 minutes late.&rdquo; Choose <b>who</b> sees it: everyone (players &amp; staff), the coaches/managers, a whole team, a single player, or <b>all supporters</b>. <b>Supporters/parents only ever receive alerts sent to &ldquo;All supporters&rdquo;</b> — they don&rsquo;t get team, staff or &ldquo;everyone&rdquo; messages. It pops up on their phone the next time they open the app (and within a minute if it&rsquo;s already open), they must tap to clear it, and it&rsquo;s kept in their <b>Alerts</b> tab. For genuinely instant reach, also post it in your usual group chat.</div>
+    <div class="field"><label>Send to</label><select id="alertTeamSel"></select></div>
+    <div class="field"><label>Message</label><textarea id="alertText" placeholder="e.g. Bus running 20 minutes late — be at the lobby for 19:20"></textarea></div>
+    <button class="btn primary" onclick="sendAlert()"><i class="ti ti-send"></i> Send alert</button>
+    <p class="eyebrow" style="margin-top:24px">Recent alerts</p>
+    <div id="alertsList"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="panel" id="p-settings">
+    <div class="hint">Tour-wide settings &mdash; set these up once per tour, then press <b>Publish</b> to push changes live. While you&rsquo;re away, keep the <b>Live position</b> section (near the bottom) updated each day so the app opens on the right day.</div>
+
+    <!-- ===== TOUR & BRANDING ===== -->
+    <p class="eyebrow">Tour</p>
+    <div class="field"><label>Tour name</label><input data-set="tourName"></div>
+    <div class="field"><label>Subtitle / destination</label><input data-set="destination"></div>
+    <div class="field"><label>Welcome heading (app front page)</label><input data-set="welcomeTitle" placeholder="e.g. Welcome to Holland"></div>
+    <div class="field"><label>Welcome message (under the heading)</label><textarea data-set="welcomeLead" placeholder="Short line, e.g. Tap your team to see your schedule."></textarea></div>
+    <p class="eyebrow" style="margin-top:24px">Front page image</p>
+    <div class="hint" style="margin-bottom:10px">The badge shown on the app&rsquo;s welcome screen. Upload a square-ish logo or photo (a PNG with a see-through background looks best). Large images are shrunk automatically. It goes live when you press Publish.</div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:6px">
+      <img id="badgePreview" alt="" style="width:92px;height:92px;object-fit:contain;background:var(--surface);border:1px solid var(--line);border-radius:14px;opacity:.3">
+      <div>
+        <input type="file" id="badgeFile" accept="image/*" style="display:none" onchange="handleBadge(this.files[0])">
+        <button class="btn" onclick="document.getElementById('badgeFile').click()"><i class="ti ti-upload"></i> Upload image</button>
+        <button class="btn ghost" style="margin-left:8px" onclick="clearBadge()"><i class="ti ti-rotate"></i> Use default</button>
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--line);margin:28px 0 4px"></div>
+
+    <!-- ===== TEAMS & PEOPLE ===== -->
+    <p class="eyebrow">Teams</p>
+    <div class="hint" style="margin-bottom:10px">Add a row per team &mdash; however many you list is how many the tour has. Each team gets its own sign-in and sees only events set to their name or to &ldquo;Everyone&rdquo;. Renaming a team here updates it across the whole schedule. Use the photo button on a row to give that team its own logo.</div>
+    <div id="teamsList"></div>
+    <button class="btn add" style="max-width:460px" onclick="addTeam()"><i class="ti ti-plus"></i> Add team</button>
+    <p class="eyebrow" style="margin-top:24px">Players (squads)</p>
+    <div class="hint" style="margin-bottom:10px">Each team&rsquo;s squad, used for the bus check-in register, batting order and meal/vote counts. Add players here, or upload them with the spreadsheet later (this same list gets filled). One name per row.</div>
+    <div id="playersList"></div>
+    <p class="eyebrow" style="margin-top:24px">Staff &amp; coaches</p>
+    <div class="hint" style="margin-bottom:10px">Contacts shown to each team (in More &rarr; Staff &amp; coaches, and on the Get-help screen). Add name and phone per team. Use full international format like <b>+44 7700 900000</b> so WhatsApp and calling work abroad.</div>
+    <div id="staffList"></div>
+
+    <div style="height:1px;background:var(--line);margin:28px 0 4px"></div>
+
+    <!-- ===== PLACE ===== -->
+    <p class="eyebrow">Weather location</p>
+    <div class="grid2">
+      <div class="field"><label>Region</label><select id="wRegion" onchange="onRegion(this.value)"></select></div>
+      <div class="field"><label>Country</label><select id="wCountry" onchange="onCountry(this.value)"></select></div>
+    </div>
+    <div class="field"><label>Town / city</label><select id="wCity" onchange="onCity(this.value)"></select></div>
+    <div id="weatherCustom" style="display:none">
+      <div class="grid2">
+        <div class="field"><label>Latitude</label><input data-set="lat" inputmode="decimal" placeholder="e.g. 52.09"></div>
+        <div class="field"><label>Longitude</label><input data-set="lng" inputmode="decimal" placeholder="e.g. 5.12"></div>
+      </div>
+      <div class="field"><label>Name to show players</label><input data-set="weatherLabel" placeholder="e.g. Utrecht"></div>
+      <div class="hint">For anywhere not in the list, enter its coordinates. Easiest way: search the place on Google Maps, right-click the spot, and the latitude &amp; longitude are the two numbers at the top of the menu &mdash; copy them in.</div>
+    </div>
+    <div class="hint" id="weatherNow" style="margin-top:8px"></div>
+    <div class="field" style="margin-top:10px"><label>Seasonal weather note (what to expect this time of year)</label><textarea data-set="weatherNote" placeholder="e.g. June is the start of the wet season in Barbados — hot and humid (around 30°C), with short, heavy afternoon showers."></textarea></div>
+    <div class="hint">Shown to players when they tap the weather bar, above the live 7-day forecast. Refresh this per trip.</div>
+    <p class="eyebrow" style="margin-top:24px">Getting around</p>
+    <div class="field"><label>Hotel name</label><input data-set="hotelName" placeholder="e.g. Sea Breeze Beach House"></div>
+    <div class="field"><label>Hotel address (for the map link)</label><input data-set="hotelAddress" placeholder="e.g. Maxwell Coast Rd, Christ Church, Barbados"></div>
+    <div class="grid2">
+      <div class="field"><label>Supporter hotel name</label><input data-set="supporterHotel" placeholder="If supporters stay elsewhere"></div>
+      <div class="field"><label>Supporter hotel address</label><input data-set="supporterHotelAddress" placeholder="Map link for supporters"></div>
+    </div>
+    <div class="field"><label>Supporter hotel phone (optional)</label><input data-set="supporterHotelPhone" placeholder="+31 ..."></div>
+    <div class="hint">Players &amp; staff get an &ldquo;Open in Maps&rdquo; tile for the team hotel; <b>supporters</b> get one for the supporter hotel (falls back to the team hotel if left blank). Match grounds link to maps automatically from each game&rsquo;s Location.</div>
+    <p class="eyebrow" style="margin-top:24px">Match officials &amp; support</p>
+    <div class="hint" style="margin-bottom:10px">Shown on the <b>Get-help</b> screen under &ldquo;Match referee&rdquo; and &ldquo;Technical support&rdquo;. These can also be set from the spreadsheet&rsquo;s Tour Details tab. Leave blank to hide.</div>
+    <div class="grid2">
+      <div class="field"><label>Match referee name</label><input data-set="matchReferee"></div>
+      <div class="field"><label>Match referee phone</label><input data-set="matchRefereePhone" placeholder="+44 7700 900000"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Technical partner / support name</label><input data-set="techPartner"></div>
+      <div class="field"><label>Technical support phone</label><input data-set="techPartnerPhone" placeholder="+44 7700 900000"></div>
+    </div>
+
+    <div style="height:1px;background:var(--line);margin:28px 0 4px"></div>
+
+    <!-- ===== LINKS & EXTRAS ===== -->
+    <p class="eyebrow">Forms &amp; links</p>
+    <div class="field"><label>Behaviour contract form link</label><input data-set="behaviourUrl" placeholder="https://tcatours.co.uk/f/your-behaviour-form"></div>
+    <div class="hint">Paste the link to a hosted behaviour-contract form (the kind that takes the pupil&rsquo;s confirmation and their parent&rsquo;s email, then emails both a copy). When this is set, a &ldquo;Behaviour contract&rdquo; button appears in the app under &ldquo;Before you go&rdquo;. Leave blank to hide it.</div>
+    <div class="field"><label>Consent-to-travel form link</label><input data-set="consentUrl" placeholder="https://tcatours.co.uk/f/consent-to-travel"></div>
+    <div class="field"><label>Visa information link</label><input data-set="visaUrl" placeholder="e.g. the official visa / entry-requirements page for the destination"></div>
+    <div class="field"><label>Online landing-card link</label><input data-set="landingCardUrl" placeholder="e.g. the destination&rsquo;s online arrival / landing-card page"></div>
+    <div class="hint">These appear under &ldquo;Before you go &rsaquo; Paperwork&rdquo; in the app. Each item still shows even when its link is blank (with a &ldquo;link to be added&rdquo; note), so players know what&rsquo;s required &mdash; add the links when you have them.</div>
+    <p class="eyebrow" style="margin-top:24px">Excursions &amp; car hire</p>
+    <div class="hint">Optional activities and car hire. These show in the app under &ldquo;Before you go&rdquo; <b>to staff and supporters only</b> (not players). Give each one a website link, a phone/WhatsApp number, or both, and an optional date/availability note for limited tours. You can also load these from the spreadsheet&rsquo;s <b>Excursions</b> tab.</div>
+    <div id="excList"></div>
+    <button class="btn" style="margin-top:6px" onclick="addExcursion()"><i class="ti ti-plus"></i> Add excursion</button>
+
+    <div style="height:1px;background:var(--line);margin:28px 0 4px"></div>
+
+    <!-- ===== OPERATIONS ===== -->
+    <p class="eyebrow">Live position</p>
+    <div class="hint" style="margin-bottom:10px">Tells the app which day to open on and what counts as done / up next. Set these to the live day while you&rsquo;re on tour, then Publish.</div>
+    <div class="grid2">
+      <div class="field"><label>Current day number</label><input data-set="currentDay" inputmode="numeric"></div>
+      <div class="field"><label>Current time (HH:MM)</label><input data-set="currentTime" placeholder="09:00"></div>
+    </div>
+    <p class="eyebrow" style="margin-top:24px">Access</p>
+    <div class="field"><label>Staff password</label><input data-set="staffCode"></div>
+    <div class="field"><label>Scorer / umpire code <span style="color:var(--muted);font-weight:400">(optional)</span></label><input data-set="officialsCode" placeholder="Leave blank for open access"></div>
+    <div class="field"><label>Tournament-staff password <span style="color:var(--muted);font-weight:400">(all teams &amp; players)</span></label><input data-set="adminCode" placeholder="Leave blank to disable the tournament-staff login"></div>
+    <div class="hint">A separate sign-in for scorers and umpires. They get a matches-only view (formats, grounds &amp; map links, kit, ball, umpire/scorer names, both squads with numbers, and the published batting orders) &mdash; nothing else. Set a code to restrict it, or leave blank to let anyone choose &ldquo;Scorer / umpire&rdquo; on the sign-in screen.</div>
+    <p class="eyebrow" style="margin-top:24px">Options</p>
+    <div class="field"><label>Players&rsquo; Player voting</label>
+      <label style="display:flex;align-items:center;gap:9px;font-size:14px;color:#fff;cursor:pointer;padding:4px 0">
+        <input type="checkbox" id="voteOpen" style="width:18px;height:18px;accent-color:#ff7c1a"> Open voting now (override the schedule)
+      </label>
+      <div class="hint">Normally voting opens by itself 24 hours before the final game and closes when that game starts &mdash; you don&rsquo;t need to do anything. Tick this only to force it open early (handy for testing); press Publish after. The vote button is always on the More page; this controls the big prompt on the schedule page.</div>
+      <div class="grid2" style="margin-top:10px">
+        <div class="field" style="margin:0"><label>Voting closes &mdash; date <span style="color:var(--muted);font-weight:400">(optional)</span></label><input data-set="voteCloseDate" placeholder="e.g. 9 July"></div>
+        <div class="field" style="margin:0"><label>Voting closes &mdash; time</label><input data-set="voteCloseTime" placeholder="e.g. 17:00"></div>
+      </div>
+      <div class="hint">Set an exact close (e.g. <b>9 July</b> at <b>17:00</b>) to override the &ldquo;closes at the final game&rdquo; default. After this moment voting is firmly closed, even if &ldquo;open voting now&rdquo; is ticked. Leave blank to use the final-game default.</div>
+    </div>
+    <div class="field"><label>Supporters / parents</label>
+      <label style="display:flex;align-items:center;gap:9px;font-size:14px;color:#fff;cursor:pointer;padding:4px 0">
+        <input type="checkbox" id="supporterMeals" style="width:18px;height:18px;accent-color:#ff7c1a"> Let supporters order food too
+      </label>
+      <div class="hint">Off by default &mdash; meal pre-ordering is players-only. Tick this if you want parents/supporters following a team to be able to order meals as well. (Players&rsquo; Player voting stays players-only either way.) Press Publish after changing.</div>
+    </div>
+    <div class="row-actions" style="margin-top:18px">
+      <button class="btn ghost" onclick="resetAll()"><i class="ti ti-rotate"></i> Reset to sample tour</button>
+    </div>
+  </section>
+
+  <!-- PUBLISH -->
+  <section class="panel" id="p-publish">
+    <div class="hint"><b>Publish to app</b> sends your changes straight to the live app — players see them within seconds, with no files to move. The buttons below are extras: a backup file, the schedule code, or a spreadsheet.</div>
+    <div style="background:rgba(255,124,26,.12);border:1px solid rgba(255,124,26,.5);border-radius:12px;padding:12px 14px;margin:4px 0 12px;font-size:13px;line-height:1.5;color:#ffce9e">
+      <b>⚠ Squad welfare data is included while testing.</b> Player medical, room, dietary and phone details are currently published so the Staff “Squad list” can be tested. The published file is <b>not password-protected</b>, so it’s only safe with the placeholder test data in use now. <b>Before going live with real pupils,</b> this must move to a protected, sign-in-only channel — flag it with your developer first.
+    </div>
+    <div class="pubrow">
+      <button class="btn primary" style="font-size:15px;padding:12px 22px" onclick="publishLive()"><i class="ti ti-cloud-upload"></i> Publish to app</button>
+      <span id="pubStatus" style="align-self:center;font-size:12.5px;color:var(--muted)"></span>
+    </div>
+    <p class="eyebrow" style="margin-top:20px">Extras</p>
+    <div class="pubrow">
+      <button class="btn" onclick="downloadJSON()"><i class="ti ti-download"></i> Download backup</button>
+      <button class="btn" onclick="copyCode()"><i class="ti ti-clipboard"></i> Copy schedule code</button>
+      <button class="btn" onclick="downloadCSV()"><i class="ti ti-file-spreadsheet"></i> Download CSV</button>
+    </div>
+    <p class="eyebrow" style="margin-top:24px">All submissions (all teams)</p>
+    <div class="hint">A company-wide view of meal pre-orders across every team. Load it live, read it on screen, then download each restaurant&rsquo;s orders as a spreadsheet to forward on. (Team coaches only see their own team inside the app; this sees everyone.)</div>
+    <div class="pubrow">
+      <button class="btn primary" onclick="loadAllSubs()"><i class="ti ti-refresh"></i> Load live orders</button>
+      <button class="btn" onclick="downloadAllMealsCSV()"><i class="ti ti-file-spreadsheet"></i> Download all meals (CSV)</button>
+    </div>
+    <div id="allSubs" style="margin-top:10px"></div>
+    <p class="eyebrow" style="margin-top:24px">Testing — clear submitted data</p>
+    <div class="hint">Wipes everyone&rsquo;s submitted entries from the live app so you can re-test from empty. Your schedule, squads, menus, staff and settings are <b>not</b> touched — only what players have sent in. This can&rsquo;t be undone. <b>Roll calls</b> aren&rsquo;t here — they&rsquo;re kept on each staff member&rsquo;s own phone (a coach can re-open a roll call and tap &ldquo;Clear all&rdquo; on their device).</div>
+    <div class="pubrow">
+      <button class="btn" onclick="clearSlot('preorders','meal pre-orders')"><i class="ti ti-tools-kitchen-2"></i> Clear meal pre-orders</button>
+      <button class="btn" onclick="clearSlot('votes','Players\u2019 Player votes')"><i class="ti ti-trophy"></i> Clear Players&rsquo; Player votes</button>
+      <button class="btn" onclick="clearAllTest()"><i class="ti ti-trash"></i> Clear both</button>
+    </div>
+    <div class="hint" style="margin-top:8px">Testing on this same phone/browser? This also resets <b>your own</b> saved name, order and vote so you can run the first-time flow again (it only affects this device):</div>
+    <div class="pubrow">
+      <button class="btn ghost" onclick="resetThisDevice()"><i class="ti ti-device-mobile"></i> Reset my picks on this device</button>
+    </div>
+    <p class="eyebrow">Preview</p>
+    <pre class="preview" id="preview"></pre>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ===== default sample = the Parkside Barbados tour ===== */
+  function sample(){return {
+    settings:{tourName:'Parkside Tour',destination:'Barbados 2026',weatherLabel:'Bridgetown',lat:'13.0975',lng:'-59.6167',currentDay:'4',currentTime:'09:00',staffCode:'parkside26',welcomeTitle:'Welcome to the tour',welcomeLead:"Tell us your team and we'll show you just your schedule. The itinerary is kept up to date by the tour staff."},
+    teams:['Northern Knights','Southern Superchargers'],
+    days:[{n:1,date:'Fri 20 Mar'},{n:2,date:'Sat 21 Mar'},{n:3,date:'Sun 22 Mar'},{n:4,date:'Mon 23 Mar'},{n:5,date:'Tue 24 Mar'},{n:6,date:'Wed 25 Mar'},{n:7,date:'Thu 26 Mar'},{n:8,date:'Fri 27 Mar'},{n:9,date:'Sat 28 Mar'}],
+    events:[
+      {sq:'all',day:1,time:'08:00',type:'teal',title:'Depart London Gatwick',loc:'',sub:'Flight to Barbados',kit:''},
+      {sq:'all',day:1,time:'14:30',type:'teal',title:'Arrive Barbados',loc:'',sub:'Coach to hotel (local time)',kit:''},
+      {sq:'all',day:1,time:'18:30',type:'teal',title:'Dinner at the hotel',loc:'',sub:'',kit:''},
+      {sq:'all',day:1,time:'20:00',type:'purple',title:'Walk to Oistins',loc:'',sub:'Friday night fish fry',kit:''},
+      {sq:'Northern Knights',day:2,time:'10:00',type:'orange',title:'Match 1 v Franklyn Stephenson Academy',loc:'FS Academy',sub:'T20',kit:'Whites · GCS playing kit'},
+      {sq:'all',day:2,time:'13:00',type:'teal',title:'Lunch for both teams',loc:'',sub:'',kit:''},
+      {sq:'Southern Superchargers',day:2,time:'14:00',type:'orange',title:'Match 1 v Franklyn Stephenson Academy',loc:'FS Academy',sub:'T20',kit:'Whites · GCS playing kit'},
+      {sq:'all',day:2,time:'18:30',type:'teal',title:'Dinner at the hotel',loc:'',sub:'',kit:''},
+      {sq:'all',day:3,time:'14:00',type:'purple',title:'Island Bajan bus tour',loc:'',sub:'With lunch · back ~18:00',kit:''},
+      {sq:'all',day:3,time:'18:30',type:'teal',title:'Dinner at the hotel',loc:'',sub:'',kit:''},
+      {sq:'all',day:4,time:'07:30',type:'teal',title:'Breakfast — hotel',loc:'',sub:'',kit:''},
+      {sq:'Northern Knights',day:4,time:'08:45',type:'teal',title:'Coach to Rubis & warm-up',loc:'',sub:'',kit:''},
+      {sq:'Northern Knights',day:4,time:'10:00',type:'orange',title:'Match 2 v School Side @ Rubis',loc:'Rubis · meet 09:15',sub:'T20 · umpire provided',kit:'Whites · GCS playing kit'},
+      {sq:'Southern Superchargers',day:4,time:'14:00',type:'orange',title:'Match 2 v School Side @ Rubis',loc:'Rubis · meet 13:15',sub:'T20 · umpire provided',kit:'Whites · GCS playing kit'},
+      {sq:'all',day:4,time:'13:00',type:'teal',title:'Lunch at the ground',loc:'',sub:'',kit:''},
+      {sq:'all',day:4,time:'Opt',type:'purple',title:'Rascals Waterpark, Brandons Beach',loc:'',sub:'Optional · own expense · BB$35 / £15 · 1 hr',kit:''},
+      {sq:'all',day:4,time:'18:30',type:'teal',title:'Dinner at the hotel',loc:'',sub:'',kit:''},
+      {sq:'all',day:5,time:'10:00',type:'purple',title:'Day off @ The Boatyard',loc:'',sub:'Includes lunch',kit:''},
+      {sq:'all',day:5,time:'18:30',type:'teal',title:'Dinner at the hotel',loc:'',sub:'',kit:''},
+      {sq:'Northern Knights',day:6,time:'09:00',type:'orange',title:'Match 3 v School Side @ 3 W\u2019s Oval',loc:'3 W\u2019s Oval, UWI',sub:'T25 · arrive 09:00, start 10:00 · lunch provided',kit:'Whites'},
+      {sq:'Southern Superchargers',day:6,time:'09:00',type:'orange',title:'Match 3 v School Side @ Good Shepherd',loc:'Good Shepherd ground',sub:'T25 · arrive 09:00, start 10:00 · lunch provided',kit:'Whites'},
+      {sq:'all',day:7,time:'09:30',type:'purple',title:'Catamaran tour & swim with turtles',loc:'',sub:'With lunch · bring swimwear',kit:''},
+      {sq:'all',day:8,time:'Free',type:'purple',title:'Morning off',loc:'',sub:'',kit:''},
+      {sq:'all',day:8,time:'13:00',type:'teal',title:'Lunch at the hotel',loc:'',sub:'',kit:''},
+      {sq:'all',day:8,time:'16:00',type:'orange',title:'Floodlit T10 v Isolation Cavaliers',loc:'Floodlit ground',sub:'Both teams · 16:00\u201321:00 · BBQ from 18:00',kit:'Coloured kit'},
+      {sq:'all',day:9,time:'Free',type:'purple',title:'Morning off',loc:'',sub:'',kit:''},
+      {sq:'all',day:9,time:'13:00',type:'teal',title:'Lunch at the hotel',loc:'',sub:'',kit:''},
+      {sq:'all',day:9,time:'16:00',type:'teal',title:'Depart Barbados',loc:'',sub:'Flight to London',kit:''}
+    ],
+    announcements:[
+      {when:'30 min ago',title:'Rascals Waterpark today',body:'Optional after your game — BB$35 / £15 for an hour at Brandons Beach. Bring cash and swimwear if you fancy it.'},
+      {when:'2 hours ago',title:'Watch the forecast',body:'A passing shower is possible this afternoon — keep an eye on the weather strip on your schedule.'},
+      {when:'Yesterday',title:'Catamaran on Thursday',body:'Day 7 is the turtle swim and catamaran tour — pack swimwear, a towel and sun cream in your day bag.'},
+      {when:'Day 1',title:'Welcome to Barbados',body:'Great first evening at Oistins. Match days start Saturday — full GCS playing kit, please.'}
+    ]
+  };}
+
+  function teamLabel(sq){return sq==='all'?'Everyone':sq;}
+  var TYPES=[['orange','Match'],['teal','Travel'],['purple','Meals & free time']];
+  function teamsList(){return ['all'].concat(S.teams||[]);}
+  var S, uid=1, dirty=false;
+
+  function load(){
+    try{var raw=localStorage.getItem('parkside_admin'); if(raw){S=JSON.parse(raw);} }catch(e){}
+    if(!S) S=sample();
+    if(!S.teams) S.teams=['Northern Knights','Southern Superchargers'];
+    if(!S.teamLogos) S.teamLogos={};
+    if(!S.staff) S.staff={};
+    if(!S.players) S.players={};
+    if(!S.nums) S.nums={};
+    if(!S.roster) S.roster={};
+    if(!S.meals) S.meals=[];
+    if(!S.teamMeta) S.teamMeta={};
+    if(!S.moreContent) S.moreContent=[];
+    S.events.forEach(function(e){ if(e.id==null) e.id=uid++; else uid=Math.max(uid,e.id+1); });
+  }
+  function refreshPublishBtn(){var b=document.getElementById('hdrPublish'); if(!b)return; if(dirty){b.textContent='Publish changes'; b.classList.remove('clean');} else {b.textContent='Published \u2713'; b.classList.add('clean');}}
+  function save(){
+    dirty=true; refreshPublishBtn();
+    try{localStorage.setItem('parkside_admin',JSON.stringify(S));}catch(e){}
+    var s=document.getElementById('saved'); s.classList.add('show'); clearTimeout(window._st);
+    window._st=setTimeout(function(){s.classList.remove('show');},1200);
+    if(document.getElementById('p-publish').classList.contains('active')) renderPreview();
+  }
+  function typeColor(t){return t==='orange'?'var(--orange)':t==='teal'?'var(--teal)':'var(--purple)';}
+  function attr(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+  function teamLabel(sq){return sq==='all'?'Both teams':sq;}
+
+  /* ---------- SCHEDULE ---------- */
+  function renderDays(){
+    var host=document.getElementById('days'); host.innerHTML='';
+    S.days.slice().sort(function(a,b){return a.n-b.n;}).forEach(function(d){
+      var evs=S.events.filter(function(e){return e.day===d.n;}).sort(sortByTime);
+      var html='<div class="day"><div class="day-head">'+
+        '<span class="dn">Day '+d.n+'</span>'+
+        '<input class="date" value="'+attr(d.date)+'" oninput="editDay('+d.n+',this.value)" placeholder="e.g. Mon 23 Mar">'+
+        '<span class="sp"></span>'+
+        '<button class="btn ghost" onclick="delDay('+d.n+')"><i class="ti ti-trash"></i></button>'+
+        '</div><div class="day-body">';
+      evs.forEach(function(e){ html+=eventCard(e); });
+      html+='<button class="btn add" onclick="addEvent('+d.n+')"><i class="ti ti-plus"></i> Add event to Day '+d.n+'</button>';
+      html+='</div></div>';
+      host.insertAdjacentHTML('beforeend',html);
+    });
+  }
+  function eventCard(e){
+    var teamOpts=teamsList().map(function(t){return '<option value="'+attr(t)+'"'+(t===e.sq?' selected':'')+'>'+teamLabel(t)+'</option>';}).join('');
+    var typeOpts=TYPES.map(function(t){return '<option value="'+t[0]+'"'+(t[0]===e.type?' selected':'')+'>'+t[1]+'</option>';}).join('');
+    return '<div class="ev" style="--bar:'+typeColor(e.type)+'"><div class="ev-grid">'+
+      '<input value="'+attr(e.time)+'" placeholder="Time" oninput="ed('+e.id+",'time',this.value)\">"+
+      '<select onchange="ed('+e.id+",'sq',this.value)\">"+teamOpts+'</select>'+
+      '<select onchange="ed('+e.id+",'type',this.value,this)\">"+typeOpts+'</select>'+
+      '<input value="'+attr(e.title)+'" placeholder="Title" oninput="ed('+e.id+",'title',this.value)\">"+
+      '<button class="del" onclick="delEvent('+e.id+')" title="Delete">\u00D7</button>'+
+      '<input class="wide" value="'+attr(e.loc)+'" placeholder="Location (optional)" oninput="ed('+e.id+",'loc',this.value)\">"+
+      '<input class="wide" value="'+attr(e.sub)+'" placeholder="Details (optional)" oninput="ed('+e.id+",'sub',this.value)\">"+
+      '<input class="wide" value="'+attr(e.kit)+'" placeholder="Kit (optional)" oninput="ed('+e.id+",'kit',this.value)\">"+
+      '</div></div>';
+  }
+  function sortByTime(a,b){return tmin(a.time)-tmin(b.time);}
+  function tmin(t){var m=/^(\d{1,2}):(\d{2})/.exec(String(t||'')); return m?(+m[1])*60+(+m[2]):9999;}
+
+  function ed(id,f,v,sel){var e=S.events.find(function(x){return x.id===id;}); if(!e)return; e[f]=v;
+    if(f==='type'&&sel){sel.closest('.ev').style.setProperty('--bar',typeColor(v));} save();}
+  function editDay(n,v){var d=S.days.find(function(x){return x.n===n;}); if(d){d.date=v;save();}}
+  function addEvent(day){S.events.push({id:uid++,sq:'all',day:day,time:'',type:'teal',title:'',loc:'',sub:'',kit:''}); save(); renderDays();}
+  function delEvent(id){S.events=S.events.filter(function(x){return x.id!==id;}); save(); renderDays();}
+  function addDay(){var n=S.days.reduce(function(m,d){return Math.max(m,d.n);},0)+1; S.days.push({n:n,date:''}); save(); renderDays();}
+  function delDay(n){if(!confirm('Delete Day '+n+' and all its events?'))return; S.days=S.days.filter(function(d){return d.n!==n;}); S.events=S.events.filter(function(e){return e.day!==n;}); save(); renderDays();}
+
+  function shrinkImage(file,max,cb){ if(!file)return; var rd=new FileReader(); rd.onload=function(){ var img=new Image(); img.onload=function(){ var w=img.width,h=img.height; if(w>max||h>max){var s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s);} var c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h); cb(c.toDataURL('image/png')); }; img.src=rd.result; }; rd.readAsDataURL(file); }
+  function handleTeamLogo(i,file){ shrinkImage(file,200,function(d){ S.teamLogos=S.teamLogos||{}; S.teamLogos[S.teams[i]]=d; save(); renderTeams(); toast('Team logo added — press Publish'); }); }
+  /* ---------- FRONT PAGE IMAGE ---------- */
+  function renderBadge(){var p=document.getElementById('badgePreview'); if(!p)return;
+    if(S.settings.badge){p.src=S.settings.badge; p.style.opacity=1;} else {p.removeAttribute('src'); p.style.opacity=.3;}}
+  function handleBadge(file){
+    if(!file)return;
+    var rd=new FileReader();
+    rd.onload=function(){ var img=new Image(); img.onload=function(){
+      var max=480,w=img.width,h=img.height;
+      if(w>max||h>max){var s=Math.min(max/w,max/h); w=Math.round(w*s); h=Math.round(h*s);}
+      var c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      S.settings.badge=c.toDataURL('image/png');
+      save(); renderBadge(); toast('Image added — press Publish to make it live');
+    }; img.src=rd.result; };
+    rd.readAsDataURL(file);
+  }
+  function clearBadge(){ delete S.settings.badge; save(); renderBadge(); toast('Reset to default — press Publish'); }
+
+  /* ---------- TEAMS ---------- */
+  function renderTeams(){
+    var host=document.getElementById('teamsList'); host.innerHTML='';
+    (S.teams||[]).forEach(function(name,i){
+      var logo=(S.teamLogos||{})[name];
+      host.insertAdjacentHTML('beforeend',
+        '<div class="field" style="display:flex;gap:9px;align-items:center;max-width:520px;margin-bottom:10px">'+
+        '<img alt="" style="width:40px;height:40px;object-fit:contain;background:var(--surface);border:1px solid var(--line);border-radius:9px;flex:0 0 auto'+(logo?'':';opacity:.25')+'"'+(logo?(' src="'+logo+'"'):'')+'>'+
+        '<input style="flex:1;max-width:none" value="'+attr(name)+'" onchange="renameTeam('+i+',this.value)" placeholder="Team name">'+
+        '<input type="file" accept="image/*" id="tlf'+i+'" style="display:none" onchange="handleTeamLogo('+i+',this.files[0])">'+
+        '<button class="btn" title="Upload team logo" onclick="document.getElementById(\'tlf'+i+'\').click()"><i class="ti ti-photo"></i></button>'+
+        '<button class="btn ghost" onclick="delTeam('+i+')"><i class="ti ti-trash"></i></button>'+
+        '</div>');
+    });
+  }
+  function renameTeam(i,v){v=(v||'').trim(); if(!v){renderTeams();return;} var old=S.teams[i];
+    S.events.forEach(function(e){if(e.sq===old)e.sq=v;});
+    if(S.teamLogos&&S.teamLogos[old]!=null){S.teamLogos[v]=S.teamLogos[old]; delete S.teamLogos[old];}
+    if(S.staff&&S.staff[old]!=null){S.staff[v]=S.staff[old]; delete S.staff[old];}
+    if(S.players&&S.players[old]!=null){S.players[v]=S.players[old]; delete S.players[old];}
+    S.teams[i]=v; save(); renderDays(); renderTeams(); renderStaff(); renderPlayers();}
+  function addTeam(){S.teams.push('New team'); save(); renderTeams(); renderStaff(); renderPlayers(); renderDays();}
+  function delTeam(i){var name=S.teams[i]; if(!confirm('Remove "'+name+'"? Its events will be set to Everyone.'))return;
+    S.events.forEach(function(e){if(e.sq===name)e.sq='all';}); if(S.teamLogos)delete S.teamLogos[name]; if(S.staff)delete S.staff[name]; if(S.players)delete S.players[name]; S.teams.splice(i,1); save(); renderTeams(); renderStaff(); renderPlayers(); renderDays();}
+
+  /* ---------- STAFF & COACHES ---------- */
+  function renderStaff(){
+    var host=document.getElementById('staffList'); if(!host)return; host.innerHTML=''; S.staff=S.staff||{};
+    if(!(S.teams||[]).length){ host.innerHTML='<div class="hint">Add a team above first, then you can add its staff here.</div>'; return; }
+    (S.teams||[]).forEach(function(team,i){
+      var list=S.staff[team]||[];
+      var rows=list.map(function(p,idx){
+        return '<div class="field" style="display:flex;gap:9px;align-items:center;max-width:520px;margin-bottom:8px">'+
+          '<input style="flex:1;max-width:none" value="'+attr(p.name)+'" placeholder="Name" oninput="editStaff('+i+','+idx+",'name',this.value)\">"+
+          '<input style="flex:1;max-width:none" value="'+attr(p.phone)+'" placeholder="+44 7700 900000" inputmode="tel" oninput="editStaff('+i+','+idx+",'phone',this.value)\">"+
+          '<button class="btn ghost" onclick="delStaff('+i+','+idx+')"><i class="ti ti-trash"></i></button>'+
+          '</div>';
+      }).join('');
+      host.insertAdjacentHTML('beforeend',
+        '<div style="margin-bottom:14px"><div class="eyebrow" style="margin:6px 0 8px;color:var(--muted)">'+attr(team)+'</div>'+
+        rows+
+        '<button class="btn add" style="max-width:460px" onclick="addStaff('+i+')"><i class="ti ti-plus"></i> Add staff to '+attr(team)+'</button></div>');
+    });
+  }
+  function addStaff(i){var team=S.teams[i]; if(!team)return; S.staff=S.staff||{}; (S.staff[team]=S.staff[team]||[]).push({name:'',phone:''}); save(); renderStaff();}
+  function editStaff(i,idx,f,v){var team=S.teams[i]; if(!team)return; if(S.staff&&S.staff[team]&&S.staff[team][idx]){S.staff[team][idx][f]=v; save();}}
+  function delStaff(i,idx){var team=S.teams[i]; if(S.staff&&S.staff[team]){S.staff[team].splice(idx,1); save(); renderStaff();}}
+
+  /* ---------- PLAYERS (squad) ---------- */
+  function renderPlayers(){
+    var host=document.getElementById('playersList'); if(!host)return; host.innerHTML=''; S.players=S.players||{}; S.nums=S.nums||{};
+    if(!(S.teams||[]).length){ host.innerHTML='<div class="hint">Add a team above first, then you can add its squad here.</div>'; return; }
+    (S.teams||[]).forEach(function(team,i){
+      var list=S.players[team]||[], nums=S.nums[team]||{};
+      var rows=list.map(function(nm,idx){
+        return '<div class="field" style="display:flex;gap:9px;align-items:center;max-width:520px;margin-bottom:8px">'+
+          '<input style="width:64px;flex:0 0 auto;text-align:center" value="'+attr(nums[nm]||'')+'" placeholder="#" inputmode="numeric" oninput="editPlayerNum('+i+','+idx+',this.value)" aria-label="Squad number">'+
+          '<input style="flex:1;max-width:none" value="'+attr(nm)+'" placeholder="Player name" oninput="editPlayer('+i+','+idx+',this.value)">'+
+          '<button class="btn ghost" onclick="delPlayer('+i+','+idx+')"><i class="ti ti-trash"></i></button>'+
+          '</div>';
+      }).join('');
+      host.insertAdjacentHTML('beforeend',
+        '<div style="margin-bottom:14px"><div class="eyebrow" style="margin:6px 0 8px;color:var(--muted)">'+attr(team)+' &middot; '+list.length+' player'+(list.length===1?'':'s')+'</div>'+
+        (list.length?'<div class="hint" style="margin:-2px 0 8px">The small box is the player&rsquo;s squad / shirt number (optional).</div>':'')+
+        rows+
+        '<button class="btn add" style="max-width:460px" onclick="addPlayer('+i+')"><i class="ti ti-plus"></i> Add player to '+attr(team)+'</button></div>');
+    });
+  }
+  function addPlayer(i){var team=S.teams[i]; if(!team)return; S.players=S.players||{}; (S.players[team]=S.players[team]||[]).push(''); save(); renderPlayers();}
+  function editPlayer(i,idx,v){var team=S.teams[i]; if(!team)return; if(S.players&&S.players[team]){ var old=S.players[team][idx]; S.players[team][idx]=v;
+    S.nums=S.nums||{}; var tn=S.nums[team]; if(tn && old!==v && tn[old]!=null){ if(v.trim()!=='') tn[v]=tn[old]; delete tn[old]; } save(); }}
+  function editPlayerNum(i,idx,v){var team=S.teams[i]; if(!team)return; var nm=(S.players[team]||[])[idx]; if(nm==null)return; S.nums=S.nums||{}; (S.nums[team]=S.nums[team]||{}); v=String(v).trim(); if(v==='') delete S.nums[team][nm]; else S.nums[team][nm]=v; save();}
+  function delPlayer(i,idx){var team=S.teams[i]; if(S.players&&S.players[team]){ var nm=S.players[team][idx]; S.players[team].splice(idx,1); if(S.nums&&S.nums[team]) delete S.nums[team][nm]; save(); renderPlayers();}}
+
+  /* ---------- ANNOUNCEMENTS ---------- */
+  function renderAnns(){
+    var host=document.getElementById('anns'); host.innerHTML='';
+    S.announcements.forEach(function(a,i){
+      host.insertAdjacentHTML('beforeend',
+        '<div class="ann"><div class="ann-top">'+
+        '<input style="width:130px;flex:0 0 auto" value="'+attr(a.when)+'" placeholder="When" oninput="eda('+i+",'when',this.value)\">"+
+        '<input value="'+attr(a.title)+'" placeholder="Title" oninput="eda('+i+",'title',this.value)\">"+
+        '<button class="btn ghost" onclick="delAnn('+i+')"><i class="ti ti-trash"></i></button>'+
+        '</div><textarea placeholder="Message" oninput="eda('+i+",'body',this.value)\">"+attr(a.body)+'</textarea></div>');
+    });
+  }
+  function eda(i,f,v){if(S.announcements[i]){S.announcements[i][f]=v;save();}}
+  function addAnn(){S.announcements.unshift({when:'Just now',title:'',body:''}); save(); renderAnns();}
+  function delAnn(i){S.announcements.splice(i,1); save(); renderAnns();}
+
+  /* ---------- SETTINGS ---------- */
+  function excArr(){ if(!Array.isArray(S.settings.excursions)) S.settings.excursions=[]; return S.settings.excursions; }
+  function renderExcursions(){
+    var host=document.getElementById('excList'); if(!host)return;
+    var arr=excArr();
+    if(!arr.length){ host.innerHTML='<div class="hint" style="opacity:.8;margin-bottom:6px">No excursions yet &mdash; tap &ldquo;Add excursion&rdquo;.</div>'; return; }
+    host.innerHTML=arr.map(function(e,i){
+      return '<div class="card" style="margin-bottom:10px">'
+        +'<div class="grid2">'
+        +'<div class="field"><label>Title</label><input data-exc="'+i+'|title" value="'+attr(e.title||'')+'" placeholder="Bioluminescence tour"></div>'
+        +'<div class="field"><label>Date / availability (optional)</label><input data-exc="'+i+'|date" value="'+attr(e.date||'')+'" placeholder="Limited places \u2014 check the site calendar"></div>'
+        +'</div>'
+        +'<div class="field"><label>Description</label><textarea data-exc="'+i+'|body" rows="3" placeholder="A must-do when in Tobago. Places are very limited and it doesn\u2019t run every night \u2014 check the calendar, then book your preferred day.">'+attr(e.body||'')+'</textarea></div>'
+        +'<div class="grid2">'
+        +'<div class="field"><label>Website link (optional)</label><input data-exc="'+i+'|url" value="'+attr(e.url||'')+'" placeholder="https://\u2026"></div>'
+        +'<div class="field"><label>Phone / WhatsApp (optional)</label><input data-exc="'+i+'|phone" value="'+attr(e.phone||'')+'" placeholder="+1 868 678 1838"></div>'
+        +'</div>'
+        +'<button class="btn ghost" onclick="removeExcursion('+i+')"><i class="ti ti-trash"></i> Remove</button>'
+        +'</div>';
+    }).join('');
+    host.querySelectorAll('[data-exc]').forEach(function(el){
+      el.addEventListener('input',function(){ var p=el.dataset.exc.split('|'), i=+p[0], k=p[1]; var a=excArr(); if(a[i]){ a[i][k]=el.value; save(); } });
+    });
+  }
+  function addExcursion(){ excArr().push({title:'',date:'',body:'',url:'',phone:''}); save(); renderExcursions(); }
+  function removeExcursion(i){ var a=excArr(); if(i>=0&&i<a.length){ a.splice(i,1); save(); renderExcursions(); } }
+  function bindSettings(){
+    document.querySelectorAll('[data-set]').forEach(function(el){
+      el.value=S.settings[el.dataset.set]||'';
+      el.addEventListener('input',function(){S.settings[el.dataset.set]=el.value; save(); document.getElementById('topSub').textContent=S.settings.destination+' · staff console'; if(el.dataset.set==='weatherLabel') updateWeatherNow();});
+    });
+    var vo=document.getElementById('voteOpen');
+    if(vo){ vo.checked = S.settings.votingOpen===true; vo.addEventListener('change',function(){ S.settings.votingOpen=vo.checked; save(); refreshPublishBtn&&refreshPublishBtn(); }); }
+    var sm=document.getElementById('supporterMeals');
+    if(sm){ sm.checked = S.settings.supporterMeals===true; sm.addEventListener('change',function(){ S.settings.supporterMeals=sm.checked; save(); refreshPublishBtn&&refreshPublishBtn(); }); }
+  }
+
+  /* ---- Weather picker: Region -> Country -> Town/city (coords built in) ---- */
+  var WEATHER_DATA=[
+    {region:'Caribbean', countries:[
+      {country:'Barbados', cities:[['Bridgetown',13.10,-59.62]]},
+      {country:'Jamaica', cities:[['Kingston',18.01,-76.79],['Montego Bay',18.47,-77.92]]},
+      {country:'Trinidad & Tobago', cities:[['Port of Spain',10.66,-61.51],['Scarborough',11.18,-60.74]]},
+      {country:'Grenada', cities:[["St George's",12.06,-61.75]]},
+      {country:'St Lucia', cities:[['Castries',14.01,-60.99]]},
+      {country:'Antigua & Barbuda', cities:[["St John's",17.12,-61.85]]},
+      {country:'Guyana', cities:[['Georgetown',6.80,-58.16]]},
+      {country:'St Kitts & Nevis', cities:[['Basseterre',17.30,-62.72]]},
+      {country:'Turks & Caicos', cities:[['Providenciales',21.77,-72.27]]}
+    ]},
+    {region:'UK & Ireland', countries:[
+      {country:'England', cities:[['London',51.51,-0.13],['Birmingham',52.48,-1.90],['Manchester',53.48,-2.24],['Leeds',53.80,-1.55],['Liverpool',53.41,-2.99],['Bristol',51.45,-2.59],['Nottingham',52.95,-1.15],['Southampton',50.90,-1.40],['Taunton',51.02,-3.10],['Chester',53.19,-2.89]]},
+      {country:'Wales', cities:[['Cardiff',51.48,-3.18],['Swansea',51.62,-3.94]]},
+      {country:'Scotland', cities:[['Edinburgh',55.95,-3.19],['Glasgow',55.86,-4.25]]},
+      {country:'Ireland', cities:[['Dublin',53.35,-6.26],['Cork',51.90,-8.47]]}
+    ]},
+    {region:'Europe', countries:[
+      {country:'Netherlands', cities:[['Amsterdam',52.37,4.90],['Utrecht',52.09,5.12],['Rotterdam',51.92,4.48],['The Hague',52.08,4.31]]},
+      {country:'Belgium', cities:[['Brussels',50.85,4.35],['Antwerp',51.22,4.40]]},
+      {country:'France', cities:[['Paris',48.86,2.35],['Nice',43.70,7.27]]},
+      {country:'Spain', cities:[['Madrid',40.42,-3.70],['Barcelona',41.39,2.17],['Malaga',36.72,-4.42]]},
+      {country:'Portugal', cities:[['Lisbon',38.72,-9.14]]},
+      {country:'Italy', cities:[['Rome',41.90,12.50],['Milan',45.46,9.19]]},
+      {country:'Germany', cities:[['Berlin',52.52,13.40],['Munich',48.14,11.58]]},
+      {country:'Denmark', cities:[['Copenhagen',55.68,12.57]]},
+      {country:'Malta', cities:[['Valletta',35.90,14.51]]}
+    ]},
+    {region:'Africa', countries:[
+      {country:'South Africa', cities:[['Cape Town',-33.92,18.42],['Johannesburg',-26.20,28.05],['Durban',-29.86,31.02],['Pretoria',-25.75,28.19],['Gqeberha (PE)',-33.96,25.60]]},
+      {country:'Zimbabwe', cities:[['Harare',-17.83,31.05],['Bulawayo',-20.15,28.58]]},
+      {country:'Namibia', cities:[['Windhoek',-22.56,17.08]]},
+      {country:'Kenya', cities:[['Nairobi',-1.29,36.82]]}
+    ]},
+    {region:'Middle East', countries:[
+      {country:'UAE', cities:[['Dubai',25.20,55.27],['Abu Dhabi',24.45,54.38],['Sharjah',25.35,55.39]]},
+      {country:'Oman', cities:[['Muscat',23.59,58.41]]}
+    ]},
+    {region:'Asia', countries:[
+      {country:'Sri Lanka', cities:[['Colombo',6.93,79.86],['Kandy',7.29,80.64],['Galle',6.04,80.22]]},
+      {country:'India', cities:[['Mumbai',19.08,72.88],['Delhi',28.61,77.21],['Bengaluru',12.97,77.59],['Chennai',13.08,80.27],['Kolkata',22.57,88.36]]},
+      {country:'Pakistan', cities:[['Lahore',31.55,74.34],['Karachi',24.86,67.01]]},
+      {country:'Bangladesh', cities:[['Dhaka',23.81,90.41]]}
+    ]},
+    {region:'Oceania', countries:[
+      {country:'Australia', cities:[['Sydney',-33.87,151.21],['Melbourne',-37.81,144.96],['Brisbane',-27.47,153.03],['Perth',-31.95,115.86],['Adelaide',-34.93,138.60]]},
+      {country:'New Zealand', cities:[['Auckland',-36.85,174.76],['Wellington',-41.29,174.78],['Christchurch',-43.53,172.64]]}
+    ]},
+    {region:'North America', countries:[
+      {country:'USA', cities:[['New York',40.71,-74.01],['Fort Lauderdale',26.12,-80.14],['Los Angeles',34.05,-118.24]]},
+      {country:'Canada', cities:[['Toronto',43.65,-79.38]]}
+    ]}
+  ];
+  function wFind(region){ for(var i=0;i<WEATHER_DATA.length;i++) if(WEATHER_DATA[i].region===region) return WEATHER_DATA[i]; return null; }
+  function wFindCountry(region,country){ var r=wFind(region); if(!r)return null; for(var i=0;i<r.countries.length;i++) if(r.countries[i].country===country) return r.countries[i]; return null; }
+  function wFindCity(region,country,city){ var c=wFindCountry(region,country); if(!c)return null; for(var i=0;i<c.cities.length;i++) if(c.cities[i][0]===city) return c.cities[i]; return null; }
+  function wFindByName(name){ name=(name||'').split(',')[0].trim().toLowerCase(); if(!name)return null;
+    for(var i=0;i<WEATHER_DATA.length;i++){var r=WEATHER_DATA[i]; for(var j=0;j<r.countries.length;j++){var c=r.countries[j]; for(var k=0;k<c.cities.length;k++){ if(c.cities[k][0].toLowerCase()===name) return {region:r.region,country:c.country,city:c.cities[k]}; }}} return null; }
+  function fillCountries(region,sel){ var cs=document.getElementById('wCountry'); if(!cs)return; var r=wFind(region);
+    cs.innerHTML='<option value="">— choose —</option>'+(r?r.countries.map(function(c){return '<option value="'+attr(c.country)+'">'+attr(c.country)+'</option>';}).join(''):''); cs.value=sel||''; cs.disabled=!r; }
+  function fillCities(region,country,sel){ var ci=document.getElementById('wCity'); if(!ci)return; var c=wFindCountry(region,country);
+    ci.innerHTML='<option value="">— choose —</option>'+(c?c.cities.map(function(x){return '<option value="'+attr(x[0])+'">'+attr(x[0])+'</option>';}).join(''):''); ci.value=sel||''; ci.disabled=!c; }
+  function renderWeatherPicker(){
+    var rs=document.getElementById('wRegion'); if(!rs)return;
+    rs.innerHTML='<option value="">— choose —</option>'+WEATHER_DATA.map(function(r){return '<option value="'+attr(r.region)+'">'+attr(r.region)+'</option>';}).join('')+'<option value="__other__">Somewhere else (enter coordinates)</option>';
+    if(S.settings.weatherMode==='coords'){ rs.value='__other__'; toggleCustom(true); var cc=document.getElementById('wCountry'),ci=document.getElementById('wCity'); if(cc){cc.innerHTML='<option>—</option>';cc.disabled=true;} if(ci){ci.innerHTML='<option>—</option>';ci.disabled=true;} updateWeatherNow(); return; }
+    // City mode — try to reflect the saved selection (auto-detect legacy labels too)
+    var reg=S.settings.weatherRegion||'', cty=S.settings.weatherCountry||'', label=S.settings.weatherLabel||'';
+    if(!reg && label){ var hit=wFindByName(label); if(hit){ reg=hit.region; cty=hit.country; S.settings.weatherRegion=reg; S.settings.weatherCountry=cty; S.settings.weatherLabel=hit.city[0]; S.settings.lat=String(hit.city[1]); S.settings.lng=String(hit.city[2]); S.settings.weatherMode='city'; } }
+    rs.value=reg||''; toggleCustom(false);
+    fillCountries(reg,cty); fillCities(reg,cty,S.settings.weatherLabel||'');
+    updateWeatherNow();
+  }
+  function toggleCustom(on){ var d=document.getElementById('weatherCustom'); if(d)d.style.display=on?'':'none'; }
+  function syncSettingFields(){ document.querySelectorAll('[data-set]').forEach(function(el){ el.value=S.settings[el.dataset.set]||''; }); }
+  function onRegion(v){
+    if(v==='__other__'){ S.settings.weatherMode='coords'; S.settings.weatherRegion=''; S.settings.weatherCountry=''; toggleCustom(true);
+      var cc=document.getElementById('wCountry'),ci=document.getElementById('wCity'); if(cc){cc.innerHTML='<option>—</option>';cc.disabled=true;} if(ci){ci.innerHTML='<option>—</option>';ci.disabled=true;}
+      save(); syncSettingFields(); updateWeatherNow(); return; }
+    S.settings.weatherMode='city'; S.settings.weatherRegion=v; S.settings.weatherCountry=''; toggleCustom(false);
+    fillCountries(v,''); fillCities(v,'',''); save(); updateWeatherNow();
+  }
+  function onCountry(v){ S.settings.weatherCountry=v; fillCities(S.settings.weatherRegion,v,''); save(); updateWeatherNow(); }
+  function onCity(v){ var c=wFindCity(S.settings.weatherRegion,S.settings.weatherCountry,v);
+    if(c){ S.settings.weatherMode='city'; S.settings.weatherLabel=c[0]; S.settings.lat=String(c[1]); S.settings.lng=String(c[2]); }
+    save(); syncSettingFields(); updateWeatherNow(); }
+  function updateWeatherNow(){ var n=document.getElementById('weatherNow'); if(!n)return;
+    var coords=(S.settings.weatherMode==='coords');
+    var label=coords?(S.settings.weatherLabel||((S.settings.lat||'?')+', '+(S.settings.lng||'?'))):(S.settings.weatherLabel||'');
+    n.textContent=label?('Players will see weather for: '+label+'  ·  press Publish to apply'):'No weather location chosen yet.';
+  }
+
+  /* ---------- ALERTS ---------- */
+  function alertAudLabel(a){
+    if(!a) return '';
+    if(a.team==='all') return 'Everyone (players & staff)';
+    if(a.team==='staff') return 'Coaches / managers';
+    if(a.team==='supporters') return 'All supporters';
+    if(a.player) return a.team+' · '+a.player;
+    return a.team;
+  }
+  function parseAud(raw){
+    raw=raw||'';
+    if(raw==='all'||raw==='staff'||raw==='supporters') return {team:raw};
+    if(raw.indexOf('player::')===0){ var p=raw.split('::'); return {team:p[1], player:p.slice(2).join('::')}; }
+    if(raw.indexOf('team::')===0) return {team:raw.substring(6)};
+    return {team:raw};
+  }
+  function populateAlertTeams(){
+    var sel=document.getElementById('alertTeamSel'); if(!sel)return;
+    var h='<option value="all">Everyone (players &amp; staff)</option>'+
+          '<option value="staff">Coaches / managers</option>'+
+          '<option value="supporters">All supporters</option>';
+    (S.teams||[]).forEach(function(t){
+      var players=((S.players&&S.players[t])||[]).filter(function(n){return n&&n.trim();});
+      h+='<optgroup label="'+attr(t)+'">';
+      h+='<option value="team::'+attr(t)+'">'+attr(t)+' — whole team</option>';
+      players.forEach(function(p){ h+='<option value="player::'+attr(t)+'::'+attr(p)+'">'+attr(t)+' — '+attr(p)+'</option>'; });
+      h+='</optgroup>';
+    });
+    sel.innerHTML=h;
+  }
+  function loadAlerts(){
+    populateAlertTeams();
+    getJSON('?type=alerts').then(function(r){return r.ok?r.json():[];})
+      .then(function(list){ renderAlertsList(Array.isArray(list)?list:[]); })
+      .catch(function(){ document.getElementById('alertsList').innerHTML='<div class="hint">Couldn\'t load recent alerts — only works on the live (hosted) admin.</div>'; });
+  }
+  function renderAlertsList(list){
+    var host=document.getElementById('alertsList'); if(!host)return;
+    if(!list.length){ host.innerHTML='<div class="hint">No alerts sent yet.</div>'; return; }
+    host.innerHTML=list.map(function(a){
+      return '<div class="card"><div class="when">'+attr(alertAudLabel(a))+'</div>'+
+        '<div style="display:flex;gap:10px;align-items:flex-start"><p style="flex:1">'+attr(a.text)+'</p>'+
+        '<button class="btn ghost" onclick="deleteAlert(\''+a.id+'\')"><i class="ti ti-trash"></i></button></div></div>';
+    }).join('');
+  }
+  function sendAlert(){
+    var aud=parseAud(document.getElementById('alertTeamSel').value);
+    var text=(document.getElementById('alertText').value||'').trim();
+    if(!text){ toast('Type a message first'); return; }
+    var a={id:'a'+Date.now(), team:aud.team, text:text, ts:Date.now()}; if(aud.player) a.player=aud.player;
+    getJSON('?type=alerts').then(function(r){return r.ok?r.json():[];}).then(function(list){
+      if(!Array.isArray(list))list=[]; list.unshift(a); list=list.slice(0,20);
+      return fetch('/.netlify/functions/tour?type=alerts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(list)}).then(function(r){return r.json();}).then(function(j){ return {j:j,list:list}; });
+    }).then(function(o){ if(o.j&&o.j.ok){ document.getElementById('alertText').value=''; toast('Alert sent to '+alertAudLabel(a)); renderAlertsList(o.list); } else toast('Send failed'); })
+      .catch(function(){ toast('Send failed — are you online and on the live admin?'); });
+  }
+  function deleteAlert(id){
+    getJSON('?type=alerts').then(function(r){return r.ok?r.json():[];}).then(function(list){
+      if(!Array.isArray(list))list=[]; list=list.filter(function(a){return a.id!==id;});
+      return fetch('/.netlify/functions/tour?type=alerts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(list)}).then(function(){return list;});
+    }).then(function(list){ renderAlertsList(list); toast('Alert removed'); }).catch(function(){ toast('Could not remove'); });
+  }
+
+  /* ---------- SCHEDULE IMPORT ---------- */
+  function scheduleTemplate(){
+    var csv='Day,Date,Time,Team,Type,Title,Location,Detail,Kit\n'+
+      '1,Fri 20 Mar,18:30,All,Travel,Arrive & hotel check-in,Hotel,Coach from airport,\n'+
+      '1,Fri 20 Mar,20:00,All,Social,Welcome dinner,,,\n'+
+      '2,Sat 21 Mar,10:00,Northern Knights,Match,Match 1 v Local XI,Main Ground,T20,Whites\n'+
+      '2,Sat 21 Mar,13:00,All,Meal,Lunch for both teams,,,\n'+
+      '2,Sat 21 Mar,14:00,Southern Superchargers,Match,Match 1 v Local XI,Main Ground,T20,Whites\n'+
+      '3,Sun 22 Mar,14:00,All,Free,Island tour,,With lunch,\n';
+    dl('schedule-template.csv',csv,'text/csv');
+  }
+  function parseCSV(text){
+    text=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+    var rows=[],row=[],field='',inQ=false;
+    for(var i=0;i<text.length;i++){var c=text[i];
+      if(inQ){ if(c=='"'){ if(text[i+1]=='"'){field+='"';i++;} else inQ=false; } else field+=c; }
+      else { if(c=='"')inQ=true; else if(c==','){row.push(field);field='';} else if(c=='\n'){row.push(field);rows.push(row);row=[];field='';} else field+=c; } }
+    if(field!==''||row.length){row.push(field);rows.push(row);}
+    return rows;
+  }
+  function rowsToObjects(rows){
+    if(!rows||!rows.length)return [];
+    var headers=rows[0].map(function(h){return String(h==null?'':h).trim().toLowerCase();});
+    return rows.slice(1).map(function(r){var o={}; headers.forEach(function(h,i){o[h]=(r[i]==null?'':String(r[i])).trim();}); return o;})
+      .filter(function(o){return Object.keys(o).some(function(k){return o[k]!=='';});});
+  }
+  function handleScheduleFile(file){
+    if(!file)return;
+    var name=(file.name||'').toLowerCase(), reader=new FileReader();
+    if(/\.(xlsx|xls)$/.test(name)){
+      if(typeof XLSX==='undefined'){toast('Excel reader didn\'t load — try CSV, or check your connection');return;}
+      reader.onload=function(e){ try{ var wb=XLSX.read(e.target.result,{type:'array'}); var ws=wb.Sheets[wb.SheetNames[0]];
+        importObjs(rowsToObjects(XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false}))); }catch(err){toast('Could not read that Excel file');} };
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.onload=function(e){ try{ importObjs(rowsToObjects(parseCSV(e.target.result))); }catch(err){toast('Could not read that CSV');} };
+      reader.readAsText(file);
+    }
+  }
+  function _gv(o,k){return (o[k]==null?'':String(o[k])).trim();}
+  function _normTime(s){ s=(s||'').trim(); if(s==='')return '';
+    s=s.replace(/^(\d{1,2}:\d{2}):\d{2}$/,'$1');
+    var n=Number(s);
+    if(!isNaN(n)&&n>=0&&n<1){ var m=Math.round(n*1440); return ('0'+Math.floor(m/60)).slice(-2)+':'+('0'+(m%60)).slice(-2); }
+    if(!isNaN(n)&&n>1&&/\./.test(s)){ var f=n-Math.floor(n),m2=Math.round(f*1440); return ('0'+Math.floor(m2/60)).slice(-2)+':'+('0'+(m2%60)).slice(-2); }
+    return s; }
+  function _typeFor(val){var s=(val||'').trim().toLowerCase();
+    if(/match|cricket|game|fixture|t20|innings|play/.test(s)||s==='orange')return 'orange';
+    if(/meal|meals|breakfast|brunch|lunch|dinner|supper|bbq|barbecue|buffet|food|restaurant|catering/.test(s))return 'purple';
+    if(/free|social|leisure|activity|tour|beach|evening|night|optional|fun|party|bowling/.test(s)||s==='purple')return 'purple';
+    return 'teal';}
+  // Category drives the on-screen label (Match / Travel / Meal / Free & social) independently of colour.
+  function _catFor(val){var s=(val||'').trim().toLowerCase();
+    if(/match|cricket|game|fixture|t20|innings|play/.test(s)||s==='orange')return 'match';
+    if(/meal|meals|breakfast|brunch|lunch|dinner|supper|bbq|barbecue|buffet|food|restaurant|catering/.test(s))return 'meal';
+    if(/free|social|leisure|activity|tour|beach|evening|night|optional|fun|party|bowling/.test(s)||s==='purple')return 'free';
+    return 'travel';}
+  // Build schedule events + day labels from rows (Schedule sheet / legacy CSV). Adds any new team to S.teams.
+  function schedFromObjs(objs){
+    function teamFor(val){var s=(val||'').trim(),low=s.toLowerCase();
+      if(s===''||low==='all'||low==='everyone'||low==='both'||low==='all teams')return 'all';
+      if(S.teams.indexOf(s)<0)S.teams.push(s); return s;}
+    var events=[],daysMap={},lastDay='',lastDate='',dateMap={},autoDay=0;
+    (objs||[]).forEach(function(o){
+      var title=_gv(o,'title'),time=_normTime(_gv(o,'time'));
+      if(title===''&&time==='')return;
+      var dayRaw=_gv(o,'day'),dateRaw=_gv(o,'date');
+      if(dayRaw!=='')lastDay=dayRaw; if(dateRaw!=='')lastDate=dateRaw;
+      var dnum;
+      if(lastDay!==''&&!isNaN(parseInt(lastDay,10)))dnum=parseInt(lastDay,10);
+      else{var key=lastDate||('__'+autoDay); if(!(key in dateMap)){autoDay++;dateMap[key]=autoDay;} dnum=dateMap[key];}
+      if(dateRaw!==''||!(dnum in daysMap)) daysMap[dnum]=lastDate||daysMap[dnum]||('Day '+dnum);
+      events.push({id:uid++,sq:teamFor(_gv(o,'team')),day:dnum,time:time,type:_typeFor(_gv(o,'type')),cat:_catFor(_gv(o,'type')),title:title,loc:_gv(o,'location'),sub:_gv(o,'detail'),kit:_gv(o,'kit')});
+    });
+    return {events:events,daysMap:daysMap};
+  }
+  // Turn Games rows into match events (two teams, shown to both squads). Fills in any missing day labels.
+  function matchEvents(objs,daysMap,offMap){
+    offMap=offMap||{};
+    var evs=[];
+    (objs||[]).forEach(function(o){
+      var a=_gv(o,'team 1')||_gv(o,'team1'), b=_gv(o,'team 2')||_gv(o,'team2');
+      if(a===''&&b==='')return;
+      var dnum=parseInt(_gv(o,'day'),10); if(isNaN(dnum))return;
+      var start=_normTime(_gv(o,'start')||_gv(o,'time'));
+      var dateLabel=_gv(o,'date'); if(dateLabel && !(dnum in daysMap)) daysMap[dnum]=dateLabel;
+      var fmt=_gv(o,'format');
+      var u1=_gv(o,'umpire 1')||_gv(o,'umpire1')||_gv(o,'umpire a'), u2=_gv(o,'umpire 2')||_gv(o,'umpire2')||_gv(o,'umpire b');
+      var s1=_gv(o,'scorer 1')||_gv(o,'scorer1')||_gv(o,'scorer a'), s2=_gv(o,'scorer 2')||_gv(o,'scorer2')||_gv(o,'scorer b');
+      var umpDisp=[u1,u2].filter(Boolean).join(' & ')||_gv(o,'umpires');
+      var scoDisp=[s1,s2].filter(Boolean).join(' & ')||_gv(o,'scorers');
+      evs.push({id:uid++,sq:'all',match:1,teamA:a,teamB:b,teams:[a,b],day:dnum,time:start,type:'orange',cat:'match',
+        title:(a||'TBC')+' v '+(b||'TBC'),loc:_gv(o,'location'),sub:fmt,kit:_gv(o,'kit'),
+        meta:{no:_gv(o,'match #')||_gv(o,'match'),format:fmt,arrival:_normTime(_gv(o,'arrival')),start:start,
+          lunch:_normTime(_gv(o,'lunch')),finish:_normTime(_gv(o,'finish')),
+          returnHotel:_normTime(_gv(o,'return to hotel')||_gv(o,'return hotel')),
+          ball:_gv(o,'ball colour'),balls:_gv(o,'balls'),
+          ground:_gv(o,'ground')||_gv(o,'venue'),pitch:_gv(o,'pitch')||_gv(o,'wicket'),
+          umpire1:u1,umpire2:u2,scorer1:s1,scorer2:s2,umpires:umpDisp,scorers:scoDisp,
+          umpire1Phone:_gv(o,'umpire 1 phone')||_gv(o,'umpire1 phone')||offPhone(offMap,u1),
+          umpire2Phone:_gv(o,'umpire 2 phone')||_gv(o,'umpire2 phone')||offPhone(offMap,u2),
+          scorer1Phone:_gv(o,'scorer 1 phone')||_gv(o,'scorer1 phone')||offPhone(offMap,s1),
+          scorer2Phone:_gv(o,'scorer 2 phone')||_gv(o,'scorer2 phone')||offPhone(offMap,s2),
+          scorer:_gv(o,'scorer required'),notes:_gv(o,'notes')}});
+    });
+    return evs;
+  }
+  // Legacy / CSV: schedule-only import (one sheet).
+  function importObjs(objs){
+    if(!objs||!objs.length){toast('No rows found — check the file matches the template');return;}
+    if(!confirm('Import '+objs.length+' rows? This replaces the current days and events. Teams, settings and announcements are kept.'))return;
+    var r=schedFromObjs(objs);
+    if(!r.events.length){toast('No usable rows — make sure Title or Time is filled');return;}
+    S.events=r.events;
+    S.days=Object.keys(r.daysMap).map(function(k){return {n:Number(k),date:r.daysMap[k]};}).sort(function(a,b){return a.n-b.n;});
+    save(); renderDays(); renderTeams(); if(typeof populateAlertTeams==='function')populateAlertTeams();
+    toast(r.events.length+' events imported — review them, then Publish');
+  }
+
+  /* ---------- WHOLE-TOUR IMPORT (one workbook, many tabs) ---------- */
+  function _norm(x){return String(x==null?'':x).toLowerCase().replace(/[^a-z0-9]/g,'');}
+  function findSheet(wb,cands){var want=cands.map(_norm);
+    for(var i=0;i<wb.SheetNames.length;i++){ if(want.indexOf(_norm(wb.SheetNames[i]))>=0) return wb.Sheets[wb.SheetNames[i]]; }
+    return null;}
+  function sheetRows(ws){ return ws? rowsToObjects(XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false})) : []; }
+  function kvRows(ws){ var m={}; if(!ws)return m;
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+    rows.forEach(function(r){ var k=String(r[0]==null?'':r[0]).trim().toLowerCase(); if(k&&k!=='field') m[k]=String(r[1]==null?'':r[1]).trim(); });
+    return m; }
+  function buildOfficials(wb){
+    var ws=findSheet(wb,['umpires and scorers','umpires & scorers','umpires and scorers contacts','match officials','officials','umpires','scorers']);
+    var map={}; if(!ws) return map;
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+    var bad=/^(umpire|scorer|name|contact|official|phone|number)/i;
+    rows.forEach(function(r){ [[0,1],[2,3]].forEach(function(p){
+      var nm=String(r[p[0]]==null?'':r[p[0]]).trim(), ph=String(r[p[1]]==null?'':r[p[1]]).trim();
+      if(nm && ph && !bad.test(nm)) map[nm.toLowerCase()]=ph;
+    }); });
+    return map;
+  }
+  function offPhone(map,name){ return (map&&name)?(map[String(name).trim().toLowerCase()]||''):''; }
+  function handleTourFile(file){
+    if(!file)return;
+    var name=(file.name||'').toLowerCase(), reader=new FileReader();
+    if(/\.(xlsx|xls)$/.test(name)){
+      if(typeof XLSX==='undefined'){toast('Excel reader didn\'t load — try again, or check your connection');return;}
+      reader.onload=function(e){ try{ var wb=XLSX.read(e.target.result,{type:'array'});
+        var multi=findSheet(wb,['tour','teams','schedule','non game schedule','games','games schedule','squads','staff','more content']);
+        if(multi) fullImport(wb);
+        else importObjs(rowsToObjects(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false})));
+      }catch(err){toast('Could not read that file');} };
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.onload=function(e){ try{ importObjs(rowsToObjects(parseCSV(e.target.result))); }catch(err){toast('Could not read that CSV');} };
+      reader.readAsText(file);
+    }
+  }
+  function fullImport(wb){
+    var tour=kvRows(findSheet(wb,['tour','tour details','settings']));
+    var teamRows=sheetRows(findSheet(wb,['teams']));
+    var schedRows=sheetRows(findSheet(wb,['schedule','non game schedule','itinerary','timetable','programme','daily schedule','events']));
+    var gameRows=sheetRows(findSheet(wb,['games','games schedule','game schedule','fixtures','matches']));
+    var squadRows=sheetRows(findSheet(wb,['squads','players','squad']));
+    var staffRows=sheetRows(findSheet(wb,['staff','coaches','coaching staff','coaching','team staff']));
+    var offMap=buildOfficials(wb);
+    var moreRows=sheetRows(findSheet(wb,['more content','more','info']));
+    var mealsWS=findSheet(wb,['meals','menus','menu','catering']); var mealRows=mealsWS?sheetRows(mealsWS):[];
+    var excWS=findSheet(wb,['excursions','excursion','car hire','activities','trips']); var excRows=excWS?sheetRows(excWS):[];
+
+    // teams (sign-in teams go into S.teams; all rows recorded in teamMeta)
+    var teams=[], teamMeta={};
+    teamRows.forEach(function(o){ var nm=_gv(o,'team'); if(!nm)return;
+      var signin=(_gv(o,'sign-in')||_gv(o,'signin')||_gv(o,'sign in')).toLowerCase();
+      teamMeta[nm]={type:_gv(o,'type'),signin:(signin==='no'?'no':'yes')};
+      if(signin!=='no' && teams.indexOf(nm)<0) teams.push(nm);
+    });
+    if(!teams.length){ for(var _ti=1;_ti<=16;_ti++){ var _tn=String(tour['team '+_ti]||'').trim(); if(_tn && teams.indexOf(_tn)<0) teams.push(_tn); } }
+    if(!teams.length){ squadRows.forEach(function(o){ var t=_gv(o,'team'); if(t && teams.indexOf(t)<0) teams.push(t); }); }
+    if(teamRows.length) S.teamMeta=teamMeta;
+    // NOTE: S.teams is set authoritatively AFTER the schedule parse below, so leftover
+    // example rows in the Schedule tab can't sneak old team names into the sign-in list.
+
+    // schedule + fixtures
+    var built=schedFromObjs(schedRows);
+    var matchEvs=matchEvents(gameRows,built.daysMap,offMap);
+
+    // squads -> players (names, back-compatible) + roster (rich, staff-only) + nums (name -> squad number)
+    var players={}, roster={}, nums={};
+    squadRows.forEach(function(o){ var team=_gv(o,'team'), nm=_gv(o,'name')||_gv(o,'player')||_gv(o,'pupil')||_gv(o,'full name'); if(!team||!nm)return;
+      (players[team]=players[team]||[]).push(nm);
+      var num=_gv(o,'number')||_gv(o,'squad number')||_gv(o,'shirt number')||_gv(o,'squad no')||_gv(o,'no')||_gv(o,'#');
+      if(num){ (nums[team]=nums[team]||{})[nm]=num; }
+      (roster[team]=roster[team]||[]).push({name:nm, num:num, role:_gv(o,'role'),
+        phone:_gv(o,'contact number')||_gv(o,'contact')||_gv(o,'phone'), room:_gv(o,'room number')||_gv(o,'room'),
+        medical:_gv(o,'medical conditions')||_gv(o,'medical'), dietary:_gv(o,'dietary requirements')||_gv(o,'dietary')});
+    });
+
+    // Authoritative sign-in teams = Tour Details teams (+ any team that actually has a squad).
+    // Set here, AFTER schedFromObjs, so leftover example rows in the Schedule tab can't
+    // re-add old team names (e.g. Northern Knights) to the sign-in list.
+    Object.keys(players).forEach(function(t){ if(teams.indexOf(t)<0) teams.push(t); });
+    if(teams.length) S.teams=teams;
+
+    // staff
+    var staff={};
+    staffRows.forEach(function(o){ var team=_gv(o,'team'), nm=_gv(o,'name')||_gv(o,'staff')||_gv(o,'full name'); if(!team||!nm)return;
+      (staff[team]=staff[team]||[]).push({name:nm, phone:_gv(o,'contact number')||_gv(o,'contact')||_gv(o,'phone'),
+        role:_gv(o,'role'), room:_gv(o,'room number')||_gv(o,'room')});
+    });
+
+    // more content
+    var more=moreRows.map(function(o){ return {tile:_gv(o,'tile')||_gv(o,'section'), heading:_gv(o,'heading'),
+      text:_gv(o,'text')||_gv(o,'content'), icon:_gv(o,'icon'),
+      highlight:((_gv(o,'highlight')||_gv(o,'required')).toLowerCase()==='yes')}; })
+      .filter(function(x){return x.tile||x.text;});
+
+    // meals: group rows by Restaurant (+ optional Label). Supports wide columns (Starter/Main/Dessert)
+    // and a long format (Course + Option). Empty courses are dropped so they don't show in the app.
+    var mealsMap={}, mealsOrder=[];
+    function mealCourseName(c){ c=String(c||'').toLowerCase(); return c.indexOf('start')>=0?'Starter':((c.indexOf('dess')>=0||c.indexOf('pud')>=0||c.indexOf('sweet')>=0)?'Dessert':'Main'); }
+    mealRows.forEach(function(o){
+      var rest=_gv(o,'restaurant')||_gv(o,'restaurant name')||_gv(o,'venue'); if(!rest)return;
+      var label=_gv(o,'label')||_gv(o,'meal')||_gv(o,'menu')||_gv(o,'when')||'';
+      var key=rest+'|'+label;
+      if(!(key in mealsMap)){ mealsMap[key]={restaurant:rest,label:label,courses:{Starter:[],Main:[],Dessert:[]}}; mealsOrder.push(key); }
+      var M=mealsMap[key];
+      var st=_gv(o,'starter')||_gv(o,'starters'); if(st) M.courses.Starter.push(st);
+      var mn=_gv(o,'main')||_gv(o,'mains')||_gv(o,'main course'); if(mn) M.courses.Main.push(mn);
+      var ds=_gv(o,'dessert')||_gv(o,'desserts')||_gv(o,'pudding'); if(ds) M.courses.Dessert.push(ds);
+      var course=_gv(o,'course')||_gv(o,'type'), opt=_gv(o,'option')||_gv(o,'menu option')||_gv(o,'item')||_gv(o,'dish');
+      if(course&&opt) M.courses[mealCourseName(course)].push(opt);
+    });
+    mealsOrder.forEach(function(k){ var M=mealsMap[k]; ['Starter','Main','Dessert'].forEach(function(c){ var seen={},out=[];
+      M.courses[c].forEach(function(x){ x=String(x).trim(); var lc=x.toLowerCase(); if(x&&!seen[lc]){seen[lc]=1;out.push(x);} }); M.courses[c]=out; }); });
+    var meals=mealsOrder.map(function(k){return mealsMap[k];}).filter(function(M){return M.courses.Starter.length||M.courses.Main.length||M.courses.Dessert.length;});
+    // Stable, GUARANTEED-UNIQUE id per menu so two menus can never share an order key —
+    // even if their restaurant+label normalise the same (punctuation/spacing) or repeat.
+    var _idSeen={};
+    meals.forEach(function(M){
+      var base=((M.restaurant||'menu')+'_'+(M.label||'')).replace(/[^a-z0-9]+/gi,'_').toLowerCase().replace(/^_+|_+$/g,'')||'menu';
+      var id=base, n=2; while(_idSeen[id]){ id=base+'_'+(n++); }
+      _idSeen[id]=1; M.id=id;
+    });
+
+    // settings (merge; leave operational fields like current day/time untouched)
+    var st=S.settings||{};
+    function setIf(k,val){ if(val!==undefined && val!=='') st[k]=val; }
+    setIf('tourName',tour['tour name']);
+    setIf('destination',tour['destination (subtitle)']||tour['destination']);
+    setIf('country',tour['country']);
+    setIf('year',tour['tour year']||tour['year']);
+    setIf('staffCode',tour['staff password']||tour['password']);
+    setIf('adminCode',tour['tournament admin code']||tour['tournament staff password']||tour['admin code']||tour['organiser code']||tour['organizer code']);
+    setIf('voteCloseDate',tour['vote close date']||tour['voting close date']||tour['vote closes']||tour['voting closes']);
+    setIf('voteCloseTime',tour['vote close time']||tour['voting close time']||tour['vote close']);
+    var _vo=(tour['voting open']||tour['vote open']||tour['players player voting']||'').toString().trim();
+    if(_vo) st.votingOpen=/^(yes|y|true|t|on|open|1)$/i.test(_vo);   // Yes/On/Open/True/1 -> force open now
+    setIf('welcomeTitle',tour['welcome heading']||tour['welcome title']);
+    setIf('welcomeLead',tour['welcome message']);
+    setIf('hotelName',tour['hotel name']); setIf('hotelAddress',tour['hotel address']); setIf('hotelPhone',tour['hotel phone']||tour['hotel phone number']);
+    setIf('weatherNote',tour['weather note']||tour['seasonal weather note']||tour['what to expect']);
+    setIf('behaviourUrl',tour['behaviour contract link']||tour['behaviour contract form link']||tour['behaviour url']||tour['behaviour link']);
+    setIf('consentUrl',tour['consent form link']||tour['consent to travel link']||tour['consent link']||tour['consent']);
+    setIf('visaUrl',tour['visa application link']||tour['visa link']||tour['visa information link']||tour['visa']);
+    setIf('landingCardUrl',tour['landing card link']||tour['landing cards link']||tour['online landing card link']||tour['landing card']);
+    setIf('outbound',tour['outbound travel']||tour['outbound flight number']||tour['outbound fligtht number']);
+    setIf('inbound',tour['inbound travel']||tour['inbound flight number']);
+    setIf('tourManager',tour['tour manager name']); setIf('tourManagerPhone',tour['tour manager phone']);
+    setIf('supporterHotel',tour['supporter hotel']||tour['supporter hotel name']||tour['supporters hotel']);
+    setIf('supporterHotelAddress',tour['supporter hotel address']||tour['supporters hotel address']);
+    setIf('supporterHotelPhone',tour['supporter hotel phone']||tour['supporters hotel phone']||tour['supporter hotel number']);
+    setIf('matchReferee',tour['match referee']||tour['match referee name']||tour['referee']||tour['referee name']);
+    setIf('matchRefereePhone',tour['match referee phone']||tour['referee phone']||tour['match referee number']||tour['referee number']);
+    setIf('techPartner',tour['technical partner']||tour['technical support']||tour['tech partner']||tour['technical partner name']||tour['technical support name']);
+    setIf('techPartnerPhone',tour['technical partner phone']||tour['technical support phone']||tour['tech partner phone']||tour['technical partner number']||tour['technical support number']);
+    var wt=tour['weather town']||tour['weather location']||tour['weather'];
+    if(wt){ st.weatherLabel=wt; st.weatherMode='city';
+      var hit=(typeof wFindByName==='function')?wFindByName(wt):null;
+      if(hit){ st.weatherRegion=hit.region; st.weatherCountry=hit.country; st.weatherLabel=hit.city[0]; st.lat=String(hit.city[1]); st.lng=String(hit.city[2]); } }
+    S.settings=st;
+
+    var excursions=excRows.map(function(o){ function pick(kws){ for(var k in o){ if(!o.hasOwnProperty(k))continue; var nk=k.toLowerCase(); for(var i=0;i<kws.length;i++){ if(nk.indexOf(kws[i])>=0 && String(o[k]).trim()!=='') return String(o[k]).trim(); } } return ''; }
+      return {
+        title:pick(['title','name','excursion','activity']),
+        date:pick(['date','availab','when','day']),
+        body:pick(['descrip','detail','notes','info','about']),
+        url:pick(['website','link','url','web']),
+        phone:pick(['phone','whatsapp','number','contact','mobile','tel'])
+      };
+    }).filter(function(e){ return e.title||e.body||e.url||e.phone; });
+
+    var pCount=Object.keys(roster).reduce(function(a,k){return a+roster[k].length;},0);
+    var sCount=Object.keys(staff).reduce(function(a,k){return a+staff[k].length;},0);
+    var summary='Import this tour?\n\n'
+      +'\u2022 '+S.teams.length+' teams ('+S.teams.join(', ')+')\n'
+      +'\u2022 '+pCount+' players\n'
+      +'\u2022 '+sCount+' staff\n'
+      +'\u2022 '+built.events.length+' schedule events + '+matchEvs.length+' fixtures\n'
+      +'\u2022 '+more.length+' lines of More-section content\n'
+      +'\u2022 '+meals.length+' menu'+(meals.length===1?'':'s')+'\n'
+      +'\u2022 '+excursions.length+' excursion'+(excursions.length===1?'':'s')+'\n\n'
+      +'This replaces the schedule, teams, squads, staff, More content and menus. Announcements and team logos are kept.';
+    if(!confirm(summary))return;
+
+    if(schedRows.length || gameRows.length){
+      S.events=built.events.concat(matchEvs);
+      S.days=Object.keys(built.daysMap).map(function(k){return {n:Number(k),date:built.daysMap[k]};}).sort(function(a,b){return a.n-b.n;});
+    }
+    if(Object.keys(players).length){ S.players=players; S.nums=nums; }
+    if(Object.keys(roster).length) S.roster=roster;
+    if(Object.keys(staff).length) S.staff=staff;
+    if(more.length) S.moreContent=more;
+    if(mealsWS) S.meals=meals;
+    if(excWS) S.settings.excursions=excursions;
+
+    save();
+    renderDays(); renderTeams(); renderStaff(); renderPlayers();
+    if(typeof renderExcursions==='function') renderExcursions();
+    if(typeof renderBadge==='function') renderBadge();
+    if(typeof syncSettingFields==='function') syncSettingFields();
+    if(typeof renderWeatherPicker==='function') renderWeatherPicker();
+    if(typeof populateAlertTeams==='function') populateAlertTeams();
+    var sub=document.getElementById('topSub'); if(sub) sub.textContent=(S.settings.destination||'')+' \u00b7 staff console';
+    toast('Tour imported — review every tab, then Publish');
+  }
+  // Download a fresh multi-tab template (headers + a couple of example rows + a How-to tab).
+  function tourTemplate(){
+    if(typeof XLSX==='undefined'){toast('Excel writer didn\'t load — check your connection');return;}
+    var wb=XLSX.utils.book_new();
+    function add(name,aoa){ XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), name); }
+    add('How to use',[['GCS Itinerary — one-file tour template'],[''],
+      ['Fill in the tabs, then upload this file in the admin (Schedule tab > Upload tour). Review every tab, then Publish.'],[''],
+      ['Tour','tour name, destination, country, year, weather town, staff password, welcome text, hotel + travel. Edit the Value column only.'],
+      ['Teams','your squads and opponents. Sign-in = Yes means staff can log in as that team. Type is just a label.'],
+      ['Schedule','the general running order (travel, meals, social). One Team field: All or a single team. Do NOT put matches here.'],
+      ['Games','all fixtures, Team 1 v Team 2. Each game is woven into the schedule on its Day at its Start time, shown to both teams.'],
+      ['Squads','players per team. Name + Role show to the signed-in team. Contact, Room, Medical, Dietary are staff/admin only.'],
+      ['Staff','coaches/managers per team. Their numbers appear on the Emergency screen.'],
+      ['More content','packing list and destination info. Each Tile is its own box; Heading groups lines; Icon and Highlight optional. For Packing list, put one item per line in Text.'],
+      ['Meals','menus players can pre-order from. One row per option. Fill Starter / Main / Dessert columns (leave a course blank to hide it). Label is optional, e.g. "Finals night dinner".'],
+      [''],['Keep the header row on each tab exactly as it is — that is how the app reads the columns.']]);
+    add('Tour',[['Field','Value'],['Tour name','My Tour 2026'],['Destination (subtitle)','City 2026'],['Country','Netherlands'],
+      ['Tour year','2026'],['Weather town','Amsterdam'],['Staff password','changeme'],['Welcome heading','Welcome to the tour'],
+      ['Welcome message','Everything you need for the tour in one place.'],['Hotel name',''],['Hotel address',''],['Hotel phone',''],
+      ['Outbound travel',''],['Inbound travel',''],['Tour manager name',''],['Tour manager phone','']]);
+    add('Teams',[['Team','Type','Sign-in'],['Team A','Touring','Yes'],['Team B','Touring','Yes'],['Host XI','Host','Yes']]);
+    add('Schedule',[['Day','Date','Time','Team','Type','Title','Location','Detail','Kit'],
+      [1,'Sunday 5th July','09:00','All','Travel','Meet at the coach','Kia Oval','Bags loaded by 08:45','Training kit'],
+      [1,'Sunday 5th July','20:00','All','Meal','First night dinner','Hotel','','Own clothes']]);
+    add('Games',[['Day','Date','Match #','Team 1','Team 2','Format','Kit','Location','Arrival','Start','Lunch','Finish','Return to hotel','Ball colour','Balls','Umpires','Scorer required','Notes'],
+      [2,'Monday 6th July',1,'Team A','Host XI','40 Over','Coloured','Main Ground','09:30','10:30','13:00','17:00','17:30','Pink',2,2,1,'']]);
+    add('Squads',[['Team','Name','Role','Contact number','Room','Medical','Dietary'],
+      ['Team A','Example Player','Captain','','','NA','NA']]);
+    add('Staff',[['Team','Role','Name','Contact number','Room'],['Team A','Coach','Example Coach','+44 7700 900000','']]);
+    add('More content',[['Tile','Heading','Text','Icon','Highlight'],
+      ['Welcome','','Welcome to the tour — run through the packing list and info boxes below.','info','No'],
+      ['Before you travel','','Travel guidance is added automatically for your country. Add anything tour-specific here.','flag','No'],
+      ['Packing list','Cricket Kit','Bat\nPads\nGloves\nHelmet\nWhites\nColoured kit','bag','No'],
+      ['Packing list','Clothing','T-shirts\nShorts\nJumper\nWaterproof\nTrainers','bag','No'],
+      ['Packing list','Documents','Passport\nEHIC / GHIC card\nTravel insurance details','doc','No']]);
+    add('Meals',[['Restaurant','Label','Starter','Main','Dessert'],
+      ['The Pavilion','Finals night dinner','Soup of the day','Chicken burger','Chocolate brownie'],
+      ['The Pavilion','Finals night dinner','Garlic bread','Margherita pizza','Ice cream'],
+      ['The Pavilion','Finals night dinner','','Veggie pasta',''],
+      ['Hotel restaurant','Mon dinner','','Fish & chips',''],
+      ['Hotel restaurant','Mon dinner','','Curry & rice','']]);
+    var out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    dl('GCS_Tour_Template.xlsx', out, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    toast('Template downloaded');
+  }
+
+  /* ---------- EXPORT ---------- */
+  function withSlots(){
+    // copy events; compute slot for the current day so the app's Today view works
+    var cd=parseInt(S.settings.currentDay,10), now=tmin(S.settings.currentTime);
+    var evs=S.events.map(function(e){var c={sq:e.sq,day:e.day,time:e.time,type:e.type,title:e.title};
+      if(e.loc)c.loc=e.loc; if(e.sub)c.sub=e.sub; if(e.kit)c.kit=e.kit;
+      if(e.match){c.match=1; c.teamA=e.teamA||''; c.teamB=e.teamB||''; c.teams=e.teams||[]; if(e.meta)c.meta=e.meta;}
+      c._id=e.id; return c;});
+    var today=evs.filter(function(e){return e.day===cd;});
+    // earliest upcoming per audience -> 'next'
+    var nextIds={};
+    (S.teams||[]).forEach(function(team){
+      var cands=today.filter(function(e){return (e.sq===team||e.sq==='all')&&tmin(e.time)>=now;}).sort(sortByTime);
+      var matches=cands.filter(function(e){return e.type==='orange';});
+      var pick=matches.length?matches[0]:cands[0];
+      if(pick)nextIds[pick._id]=1;
+    });
+    today.forEach(function(e){
+      if(nextIds[e._id]) e.slot='next';
+      else if(tmin(e.time)<now) e.slot='past';
+      else e.slot='later';
+    });
+    evs.forEach(function(e){delete e._id;});
+    // Keep the published list chronological — matches (from the Games sheet) are appended last otherwise.
+    evs.sort(function(a,b){ return (a.day-b.day) || (tmin(a.time)-tmin(b.time)); });
+    return evs;
+  }
+  function exportData(){
+    var days={}; S.days.slice().sort(function(a,b){return a.n-b.n;}).forEach(function(d){days[d.n]=d.date;});
+    // ⚠ SENSITIVE DATA — READ BEFORE GOING LIVE WITH REAL PUPILS:
+    // The roster (player medical/dietary/room/phone) is included so the Staff "Squad list" can be tested.
+    // This blob is served by /.netlify/functions/tour WITHOUT authentication, so anyone who knows the URL
+    // can read it. That is fine for the placeholder test data in use now, but real children's medical info,
+    // room numbers and phone numbers MUST NOT be published this way. Before real data goes in, move the
+    // roster to a separate, authenticated endpoint (e.g. /tour?type=roster checked server-side against the
+    // staff password) and delete `roster:` from this return. The app already reads `d.roster` either way.
+    return {settings:S.settings, teams:S.teams, teamMeta:S.teamMeta||{}, teamLogos:S.teamLogos||{}, staff:S.staff||{}, players:S.players||{}, nums:S.nums||{}, roster:S.roster||{}, moreContent:S.moreContent||[], meals:S.meals||[], days:days, events:withSlots(), announcements:S.announcements};
+  }
+  function renderPreview(){document.getElementById('preview').textContent=JSON.stringify(exportData(),null,2);}
+
+  function dl(name,text,type){var b=new Blob([text],{type:type}); var u=URL.createObjectURL(b);
+    var a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click();
+    a.remove(); URL.revokeObjectURL(u);}
+  function downloadJSON(){dl('data.json',JSON.stringify(exportData(),null,2),'application/json'); toast('data.json downloaded');}
+  function publishLive(){
+    var st=document.getElementById('pubStatus'); st.textContent='Publishing…';
+    fetch('/.netlify/functions/tour',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(exportData())})
+      .then(function(r){return r.json();})
+      .then(function(j){ if(j&&j.ok){st.textContent='Published — live in the app now ✓'; toast('Published — live now'); dirty=false; refreshPublishBtn();} else {st.textContent='Publish failed — try again'; toast('Publish failed');} })
+      .catch(function(){ st.textContent='Publish failed — are you online and hosted on Netlify?'; toast('Publish failed'); });
+  }
+  function copyCode(){
+    var d=exportData();
+    var code='/* Parkside tour data — generated by admin */\n'+
+      'var EVENTS='+JSON.stringify(d.events)+';\n'+
+      'var DAYS='+JSON.stringify(d.days)+';';
+    navigator.clipboard&&navigator.clipboard.writeText(code).then(function(){toast('Schedule code copied');},function(){fallbackCopy(code);})||fallbackCopy(code);
+  }
+  function fallbackCopy(t){var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Schedule code copied');}catch(e){toast('Copy failed — use Download instead');}ta.remove();}
+  function downloadCSV(){
+    var rows=[['day','date','time','team','type','title','location','details','kit']];
+    var dmap={}; S.days.forEach(function(d){dmap[d.n]=d.date;});
+    var tmap={orange:'Match',teal:'Travel & meals',purple:'Free & social'};
+    S.events.slice().sort(function(a,b){return a.day-b.day||tmin(a.time)-tmin(b.time);}).forEach(function(e){
+      rows.push([e.day,dmap[e.day]||'',e.time,teamLabel(e.sq),tmap[e.type]||e.type,e.title,e.loc||'',e.sub||'',e.kit||'']);
+    });
+    var csv=rows.map(function(r){return r.map(function(c){c=String(c);return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;}).join(',');}).join('\n');
+    dl('parkside-schedule.csv',csv,'text/csv'); toast('CSV downloaded');
+  }
+
+  function resetAll(){if(!confirm('Reset everything back to the sample Parkside tour? Your changes will be lost.'))return; S=sample(); uid=1; S.events.forEach(function(e){e.id=uid++;}); save(); renderDays(); renderAnns(); renderTeams(); renderStaff(); renderPlayers(); bindSettings(); toast('Reset to sample tour');}
+
+  /* ---------- tabs ---------- */
+  function tab(name){
+    document.querySelectorAll('nav.tabs button').forEach(function(b){b.classList.toggle('active',b.dataset.p===name);});
+    document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+    document.getElementById('p-'+name).classList.add('active');
+    if(name==='publish')renderPreview();
+    if(name==='alerts')loadAlerts();
+    window.scrollTo(0,0);
+  }
+  var _tt;
+  function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(function(){t.classList.remove('show');},1800);}
+  function slotCount(o){ return (o&&typeof o==='object'&&!Array.isArray(o))?Object.keys(o).length:0; }
+  function clearSlot(type,label){
+    if(!confirm('Clear all '+label+' for everyone? This can\u2019t be undone.')) return;
+    toast('Clearing\u2026');
+    return fetch('/.netlify/functions/tour?type='+encodeURIComponent(type),{method:'DELETE'})
+      .then(function(){ return getJSON('?type='+encodeURIComponent(type)); })
+      .then(function(r){ return r.json(); })
+      .then(function(after){ var n=slotCount(after);
+        toast(n===0?(label+' cleared \u2713'):(label+': '+n+' still there — the backend function may need redeploying'));
+        return {ok:n===0, remaining:n};
+      })
+      .catch(function(){ toast('Clear failed — are you online and on the live admin?'); return {ok:false}; });
+  }
+  function clearAllTest(){
+    if(!confirm('Clear meal pre-orders AND Players\u2019 Player votes for everyone? This can\u2019t be undone.')) return;
+    toast('Clearing\u2026');
+    Promise.all(['preorders','votes'].map(function(t){
+      return fetch('/.netlify/functions/tour?type='+t,{method:'DELETE'})
+        .then(function(){ return getJSON('?type='+t); }).then(function(r){return r.json();})
+        .then(function(after){ return slotCount(after)===0; }).catch(function(){return false;});
+    })).then(function(res){ toast(res.every(Boolean)?'All submitted test data cleared \u2713':'Some slots still have data — the backend function may need redeploying'); });
+  }
+  function resetThisDevice(){
+    var pref=['gcs_order_','gcs_ballot_','gcs_ballotdone_','gcs_ballotconf_','gcs_player_','gcs_pack_'];
+    try{ Object.keys(localStorage).forEach(function(k){ if(pref.some(function(p){return k.indexOf(p)===0;})) localStorage.removeItem(k); }); }catch(e){}
+    try{localStorage.removeItem('gcs_acked');}catch(e){}
+    toast('This device reset — reopen the app to start fresh');
+  }
+  /* ---- All submissions (company view) + meal CSV by restaurant ---- */
+  function mealKeyA(m){ return (m&&m.id) ? String(m.id) : (String(m.restaurant||'')+'|'+String(m.label||'')).replace(/[^a-z0-9]+/gi,'_').toLowerCase(); }
+  function mealCoursesA(m){ return ['Starter','Main','Dessert'].filter(function(c){ return m.courses&&m.courses[c]&&m.courses[c].length; }); }
+  function csvCell(s){ s=String(s==null?'':s); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
+  var _allOrders={};
+  function ordersList(all){
+    var seen={}; Object.keys(all||{}).forEach(function(k){ var o=all[k]; if(!o||!o.orders) return; seen[((o.team||'')+'|'+(o.name||k)).toLowerCase()]=o; });
+    return Object.keys(seen).map(function(key){ return seen[key]; });
+  }
+  function loadAllSubs(){
+    var host=document.getElementById('allSubs'); if(!host) return;
+    host.innerHTML='<div class="hint">Loading…</div>';
+    fetchSlot('?type=preorders').then(function(all){
+      if(!all||typeof all!=='object'||Array.isArray(all)) all={};
+      _allOrders=all;
+      var people=ordersList(all), meals=S.meals||[];
+      if(!meals.length){ host.innerHTML='<div class="hint">No menus set up yet — add or import meals first.</div>'; return; }
+      var h='<div class="hint" style="margin-bottom:8px">'+people.length+' player'+(people.length===1?'':'s')+' have submitted at least one order.</div>';
+      meals.forEach(function(m,mi){
+        var key=mealKeyA(m), cs=mealCoursesA(m);
+        var diners=people.filter(function(p){return p.orders[key];});
+        h+='<div class="card" style="margin-bottom:10px"><div class="when">'+esc(m.restaurant||'Menu')+(m.label?' · '+esc(m.label):'')+' — '+diners.length+' order'+(diners.length===1?'':'s')+'</div>';
+        cs.forEach(function(c){
+          var tally={}; diners.forEach(function(p){ var v=p.orders[key][c]; if(v) tally[v]=(tally[v]||0)+1; });
+          var ks=Object.keys(tally); if(!ks.length) return;
+          h+='<div style="font-size:12.5px;color:var(--muted);margin:4px 0;line-height:1.5"><b style="color:#fff">'+c+':</b> '+ks.sort(function(a,b){return tally[b]-tally[a];}).map(function(o){return esc(o)+' ('+tally[o]+')';}).join(', ')+'</div>';
+        });
+        h+='<button class="btn" style="margin-top:8px" onclick="downloadMealCSV('+mi+')"><i class="ti ti-download"></i> Download this restaurant&rsquo;s CSV</button></div>';
+      });
+      host.innerHTML=h;
+    }).catch(function(err){ host.innerHTML='<div class="hint">Couldn&rsquo;t reach the live orders ('+esc(String((err&&err.message)||err))+').<br>This only works on the <b>deployed</b> admin (your live Netlify URL) while online &mdash; not a local file or a build preview, and the <code>netlify/functions/tour</code> function must be deployed.<br><button class="btn" style="margin-top:8px" onclick="loadAllSubs()"><i class="ti ti-refresh"></i> Try again</button></div>'; });
+  }
+  function mealCSV(m,people){
+    var key=mealKeyA(m), cs=mealCoursesA(m);
+    var diners=people.filter(function(p){return p.orders[key];});
+    var lines=[csvCell((m.restaurant||'Menu')+(m.label?' - '+m.label:''))+','+csvCell(diners.length+(diners.length===1?' order':' orders'))];
+    lines.push(['Course','Option','Quantity'].map(csvCell).join(','));
+    cs.forEach(function(c){
+      var opts=(m.courses&&m.courses[c])||[];
+      var tally={}; diners.forEach(function(p){ var v=p.orders[key][c]; if(v) tally[v]=(tally[v]||0)+1; });
+      opts.forEach(function(opt){ lines.push([c,opt,(tally[opt]||0)].map(csvCell).join(',')); });
+      Object.keys(tally).forEach(function(opt){ if(opts.indexOf(opt)<0) lines.push([c,opt,tally[opt]].map(csvCell).join(',')); });
+    });
+    return lines.join('\n');
+  }
+  function downloadMealCSV(mi){
+    var m=(S.meals||[])[mi]; if(!m){toast('Load orders first');return;}
+    var people=ordersList(_allOrders);
+    var fname=((m.restaurant||'menu')+(m.label?'-'+m.label:'')).replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'-orders.csv';
+    dl(fname, mealCSV(m,people),'text/csv'); toast('Downloaded '+fname);
+  }
+  function downloadAllMealsCSV(){
+    var meals=S.meals||[]; if(!meals.length){toast('No menus set up yet');return;}
+    toast('Preparing…');
+    fetchSlot('?type=preorders').then(function(all){
+      if(!all||typeof all!=='object'||Array.isArray(all)) all={}; _allOrders=all;
+      var people=ordersList(all), out=[];
+      meals.forEach(function(m){
+        var key=mealKeyA(m), cs=mealCoursesA(m);
+        var diners=people.filter(function(p){return p.orders[key];});
+        out.push((m.restaurant||'Menu')+(m.label?' - '+m.label:'')+','+csvCell(diners.length+(diners.length===1?' order':' orders')));
+        out.push(['Course','Option','Quantity'].map(csvCell).join(','));
+        cs.forEach(function(c){
+          var opts=(m.courses&&m.courses[c])||[];
+          var tally={}; diners.forEach(function(p){ var v=p.orders[key][c]; if(v) tally[v]=(tally[v]||0)+1; });
+          opts.forEach(function(opt){ out.push([c,opt,(tally[opt]||0)].map(csvCell).join(',')); });
+          Object.keys(tally).forEach(function(opt){ if(opts.indexOf(opt)<0) out.push([c,opt,tally[opt]].map(csvCell).join(',')); });
+        });
+        out.push('');
+      });
+      dl('all-meal-orders.csv', out.join('\n'),'text/csv'); toast('Downloaded all-meal-orders.csv');
+    }).catch(function(err){ toast('Couldn\u2019t reach live orders ('+((err&&err.message)||err)+') — use the deployed admin, online'); });
+  }
+
+  function start(){ renderDays(); renderAnns(); renderTeams(); renderStaff(); renderPlayers(); renderBadge(); bindSettings(); renderExcursions(); renderWeatherPicker();
+    document.getElementById('topSub').textContent=(S.settings.destination||'')+' · staff console'; refreshPublishBtn(); }
+  function adopt(d){ var localRoster={}; try{var lr=JSON.parse(localStorage.getItem('parkside_admin')||'null'); if(lr&&lr.roster)localRoster=lr.roster;}catch(e){}
+    S={settings:d.settings||sample().settings, teams:d.teams||[], teamMeta:d.teamMeta||{},
+    days:Object.keys(d.days||{}).map(function(k){return {n:Number(k),date:d.days[k]};}).sort(function(a,b){return a.n-b.n;}),
+    events:(d.events||[]).map(function(e){var c={}; for(var k in e){if(e.hasOwnProperty(k))c[k]=e[k];} c.id=uid++; c.loc=c.loc||''; c.sub=c.sub||''; c.kit=c.kit||''; return c;}),
+    announcements:d.announcements||[], teamLogos:d.teamLogos||{}, staff:d.staff||{}, players:d.players||{}, roster:d.roster||localRoster, moreContent:d.moreContent||[], meals:d.meals||[]}; }
+  function getJSON(path){ var u='/.netlify/functions/tour'+(path||''); u+=(u.indexOf('?')>=0?'&':'?')+'_='+Date.now(); return fetch(u,{cache:'no-store'}); }
+  // Tolerant read: never throws on an empty or odd body; throws a clear error only on a real HTTP/network failure.
+  function fetchSlot(path){
+    return getJSON(path).then(function(r){
+      return r.text().then(function(t){
+        if(!r.ok) throw new Error('server returned '+r.status);
+        if(!t) return {};
+        try { return JSON.parse(t); } catch(e){ throw new Error('unreadable response'); }
+      });
+    });
+  }
+  function boot(){
+    getJSON('').then(function(r){return r.ok?r.json():null;})
+      .then(function(d){ if(d){adopt(d);} else {load();} start(); })
+      .catch(function(){ load(); start(); });
+  }
+  boot();
+</script>
+</body>
+</html>

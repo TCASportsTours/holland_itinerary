@@ -1,0 +1,58 @@
+# GCS Tour App — Holland tour
+
+A self-contained Progressive Web App for school cricket tours (TCA Sports Tours / Global Cricket Series).
+No build step, no framework — plain HTML/JS served as static files, with one Netlify Function for shared data.
+
+Current build: 2026-06-24u
+
+------------------------------------------------------------
+## What's in this bundle (the website)
+- index.html .................. the main app (players, supporters, staff, scorers/umpires, tournament admin)
+- admin.html .................. the organiser console (load the spreadsheet, then Publish)
+- netlify/functions/tour.mjs .. the backend (stores itinerary, alerts, votes, batting orders)
+- manifest.json, sw.js ........ make it installable + work offline ("Add to home screen")
+- _headers, netlify.toml ...... headers + Netlify config (publish dir, functions, safety rules)
+- favicon.png, favicon.svg .... app icon
+
+The data spreadsheet is NOT in this bundle on purpose (see Privacy below).
+
+------------------------------------------------------------
+## Deploy a NEW site for the Holland tour (keeps your test site untouched)
+
+Option A — drag & drop (quickest)
+1. Go to https://app.netlify.com  ->  Add new site  ->  Deploy manually.
+2. Drag the CONTENTS of this folder (not the folder itself) onto the upload area.
+   Make sure the netlify/ folder comes too, so the function deploys.
+3. Netlify gives you a new URL (e.g. holland-tour.netlify.app). Rename it under
+   Site configuration -> Change site name if you want something tidier.
+
+Option B — Git repo
+1. Create a NEW repo (separate from your test site) and add these files at the root.
+2. In Netlify: Add new site -> Import from Git -> pick the repo. Publish.
+
+Either way this is a brand-new site, so it has its OWN data store, completely
+separate from your existing/test site.
+
+------------------------------------------------------------
+## First-time setup (after the site is live)
+1. Open  <your-new-url>/admin.html
+2. Click to load your spreadsheet (SACS_Holland__DB.xlsx) from your computer.
+3. Press Publish. That writes the itinerary/teams/players/etc. to THIS site.
+4. Open the main URL and check it looks right.
+
+The new site starts empty until you Publish — that's expected.
+
+------------------------------------------------------------
+## Updating later
+- App changes: replace index.html (and admin.html) and re-deploy. Code-only changes
+  do NOT need a re-import.
+- Data changes (schedule, players, scorers...): edit the spreadsheet on your computer,
+  load it in admin.html, press Publish. No re-deploy needed.
+
+------------------------------------------------------------
+## Privacy — important
+The spreadsheet holds contact numbers and medical/dietary notes. It is loaded
+locally in your browser by admin.html and is NEVER needed on the server, so:
+- Do NOT upload the .xlsx to Netlify / your repo.
+- netlify.toml already blocks any .xlsx from being served (returns 404) as a safety net.
+- If your existing test site has the .xlsx committed, remove it from that repo too.
