@@ -495,7 +495,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ab · remove-live-position</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ac · faq-flights-countdown-rules</div>
     </section>
 
     <!-- TODAY -->
@@ -554,10 +554,12 @@
         <div class="tile acc-red" onclick="openSOS()"><span class="tbadge"><i class="ti ti-phone-call"></i></span><div>Emergency contacts</div></div>
         <div class="tile acc-teal" onclick="openStaff()"><span class="tbadge"><i class="ti ti-user-star"></i></span><div>Staff &amp; coaches</div></div>
         <div class="tile acc-purple" onclick="openHandover()"><span class="tbadge"><i class="ti ti-heart-handshake"></i></span><div>Handover of Care</div></div>
-        <div class="tile acc-orange" onclick="openHelp()"><span class="tbadge"><i class="ti ti-help-circle"></i></span><div>How to use &amp; FAQ</div></div>
+        <div class="tile acc-orange" onclick="openHowTo()"><span class="tbadge"><i class="ti ti-help-circle"></i></span><div>How to use</div></div>
+        <div class="tile acc-teal" onclick="openFAQ()"><span class="tbadge"><i class="ti ti-messages"></i></span><div>FAQ</div></div>
+        <div class="tile acc-purple" id="rulesTile" style="display:none" onclick="openRules()"><span class="tbadge"><i class="ti ti-gavel"></i></span><div>Tournament rules</div></div>
         <div class="tile acc-teal" id="hotelTile" style="display:none" onclick="openHotelMap()"><span class="tbadge"><i class="ti ti-building"></i></span><div>Hotel &middot; Map</div></div>
         <div class="tile acc-orange" id="squadTile" style="display:none" onclick="openRoster()"><span class="tbadge"><i class="ti ti-clipboard-list"></i></span><div>Squad list</div></div>
-        <div class="tile acc-purple" id="voteTile" style="display:none" onclick="openVoteResults()"><span class="tbadge"><i class="ti ti-trophy"></i></span><div>Players&rsquo; Player</div></div>
+        <div class="tile acc-purple" id="voteTile" style="display:none" onclick="openVoteResults()"><span class="tbadge"><i class="ti ti-trophy"></i></span><div>Players&rsquo; Player<span id="voteTileSub" style="display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px"></span></div></div>
         <div class="tile acc-teal" id="mealTile" style="display:none" onclick="openMealOrders()"><span class="tbadge"><i class="ti ti-tools-kitchen-2"></i></span><div>Meal pre-orders</div></div>
         <div class="tile acc-orange" id="alertTile" style="display:none" onclick="openSendAlert()"><span class="tbadge"><i class="ti ti-send"></i></span><div>Send alert</div></div>
       </div>
@@ -568,13 +570,13 @@
 
     <!-- DETAIL -->
     <section class="screen" id="s-detail">
-      <button class="backbtn" onclick="go(lastTab)"><i class="ti ti-chevron-left"></i> Back</button>
+      <button class="backbtn" onclick="appBack()"><i class="ti ti-chevron-left"></i> Back</button>
       <div id="detailBody"></div>
     </section>
 
     <!-- EMERGENCY -->
     <section class="screen" id="s-sos">
-      <button class="backbtn" onclick="go(lastTab)"><i class="ti ti-chevron-left"></i> Back</button>
+      <button class="backbtn" onclick="appBack()"><i class="ti ti-chevron-left"></i> Back</button>
       <div class="eyebrow" style="color:#ff9d52">In an emergency</div>
       <div id="sosLocal"></div>
       <div id="sosManager"></div>
@@ -584,7 +586,7 @@
     </section>
 
     <section class="screen" id="s-checkin">
-      <button class="backbtn" onclick="go(lastTab)"><i class="ti ti-chevron-left"></i> Back</button>
+      <button class="backbtn" onclick="appBack()"><i class="ti ti-chevron-left"></i> Back</button>
       <div id="checkinBody"></div>
     </section>
 
@@ -843,6 +845,49 @@
   // Matches come from the Games sheet and are appended after Schedule events, so sort the whole
   // list by day then time before rendering — otherwise a 10:30 match shows at the end of its day.
   function tmin(t){ var m=/^(\d{1,2}):(\d{2})$/.exec(String(t||'').trim()); return m?(+m[1])*60+(+m[2]):99999; }
+  var _bigCdTimer=null;
+  function bigCountdownTarget(live){
+    var startDate=parseDayLabel(DAYS[live.minDay],tourYear()); if(!startDate) return null;
+    var times=EVENTS.filter(function(e){return e.day===live.minDay&&/^(\d{1,2}):(\d{2})$/.test(String(e.time||'').trim());}).map(function(e){return e.time;}).sort();
+    return eventTimeOn(startDate, times[0]||'09:00');
+  }
+  function renderBigCountdown(live,list,staff){
+    var startLabel=DAYS[live.minDay]||'';
+    var h='<div style="background:var(--surface);border:1px solid var(--surface-line);border-radius:20px;padding:26px 18px;margin:8px 2px 16px;text-align:center">'+
+      '<div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700">Countdown to '+esc(SETTINGS.destination||SETTINGS.tourName||'the tour')+'</div>'+
+      '<div id="cdDays" style="font-size:66px;font-weight:800;font-style:italic;color:var(--orange);line-height:1.02;margin:10px 0 0">'+live.daysUntil+'</div>'+
+      '<div style="font-size:14px;color:#fff;font-weight:600">days to go</div>'+
+      '<div id="cdHMS" style="font-size:15px;color:var(--muted);margin-top:8px;font-variant-numeric:tabular-nums">&nbsp;</div>'+
+      (startLabel?'<div style="font-size:13px;color:var(--faint);margin-top:12px"><i class="ti ti-calendar-event"></i> Kick-off: '+esc(startLabel)+'</div>':'')+
+      '</div>';
+    h+='<div class="eyebrow">Full schedule</div>';
+    var any=false;
+    for(var d=live.minDay; d<=live.maxDay; d++){
+      var ev=list.filter(function(e){return e.day===d;});
+      if(!ev.length)continue; any=true;
+      h+='<div class="daybreak"><hr><b>'+(DAYS[d]||('Day '+d))+'</b><hr></div>'+ev.map(function(e){return rowHTML(e,staff);}).join('');
+    }
+    if(!any) h+='<div class="readonly" style="justify-content:flex-start"><i class="ti ti-info-circle"></i> The full schedule will appear here.</div>';
+    h+='<div class="readonly"><i class="ti ti-lock"></i> Read-only \u00b7 updated by tour staff</div>';
+    document.getElementById('todayList').innerHTML=h;
+    document.getElementById('progbar').style.width='0%';
+    if(lastTab==='today'){ var s=document.getElementById('appSub'); if(s) s.textContent=currentSquad+' \u00b7 '+live.daysUntil+' days to go'; }
+    startBigCountdown(live);
+  }
+  function startBigCountdown(live){
+    if(_bigCdTimer){ clearInterval(_bigCdTimer); _bigCdTimer=null; }
+    var target=bigCountdownTarget(live);
+    function tick(){
+      var dEl=document.getElementById('cdDays'), hEl=document.getElementById('cdHMS');
+      if(!dEl||!hEl){ if(_bigCdTimer){clearInterval(_bigCdTimer);_bigCdTimer=null;} return; }
+      if(!target){ hEl.textContent=''; return; }
+      var ms=target.getTime()-Date.now(); if(ms<0)ms=0;
+      var s=Math.floor(ms/1000), days=Math.floor(s/86400), hh=Math.floor((s%86400)/3600), mm=Math.floor((s%3600)/60), ss=s%60;
+      dEl.textContent=days;
+      hEl.textContent=('0'+hh).slice(-2)+'h '+('0'+mm).slice(-2)+'m '+('0'+ss).slice(-2)+'s';
+    }
+    tick(); _bigCdTimer=setInterval(tick,1000);
+  }
   function renderScheduleOutsideTour(live,list,staff){
     var before=live.phase==='before', dl=live.daysUntil, startLabel=DAYS[live.minDay]||'';
     var title,sub,icon,col;
@@ -880,6 +925,7 @@
     if(live){ DEMO_TODAY=live.day; }
     // Before the tour starts (or after it ends) there is no "today" — show the full
     // schedule with a banner instead of pinning day 1 as today.
+    if(live && live.phase==='before' && live.daysUntil>30){ renderBigCountdown(live,list,staff); return; }
     if(live && live.phase!=='during'){ renderScheduleOutsideTour(live,list,staff); return; }
     var today=DEMO_TODAY;
     var past,next,later,nextTargets={};
@@ -958,7 +1004,9 @@
     document.getElementById('moreSquad').textContent= isAdmin ? 'Tournament staff \u00b7 all teams' : (sq + (isStaff? (currentPlayer?' · '+currentPlayer+' (Staff)':' · Staff') : (role==='supporter'?' · Supporter':(currentPlayer?' · '+currentPlayer:''))));
     var crest=document.getElementById('hubCrest'); if(crest){ var lg=(TEAMLOGOS||{})[sq]||SETTINGS.badge; if(lg) crest.src=lg; }
     var sqTile=document.getElementById('squadTile'); if(sqTile) sqTile.style.display=isStaff?'':'none';
-    ['voteTile','mealTile','alertTile'].forEach(function(id){ var t=document.getElementById(id); if(t) t.style.display=isStaff?'':'none'; });
+    ['voteTile','alertTile'].forEach(function(id){ var t=document.getElementById(id); if(t) t.style.display=isStaff?'':'none'; });
+    var mt=document.getElementById('mealTile'); if(mt) mt.style.display=(isStaff && MEALS && MEALS.length)?'':'none';
+    var rt=document.getElementById('rulesTile'); if(rt) rt.style.display=hasVal(SETTINGS.rulesUrl)?'':'none';
     var ani=document.getElementById('alertNavIcon'); if(ani) ani.className='ti '+(isStaff?'ti-send':'ti-bell');
     var anb=document.getElementById('alertNavBtn'); if(anb) anb.setAttribute('aria-label', isStaff?'Send an alert':'Alerts');
     var ht=document.getElementById('hotelTile'); if(ht){ var hasHotel = isSupporter() ? !!(SETTINGS.supporterHotel||SETTINGS.supporterHotelAddress) : !!(SETTINGS&&SETTINGS.hotelAddress); ht.style.display=hasHotel?'':'none'; }
@@ -969,7 +1017,7 @@
   function switchSquad(){
     isStaff=false; staffPending=false; isAdmin=false; _adminPending=false; currentPlayer=''; role='player'; pendingRole='player'; officialKind=''; officialName=''; clearPlayer(); clearSession();
     var sqTile=document.getElementById('squadTile'); if(sqTile) sqTile.style.display='none';
-    ['voteTile','mealTile','alertTile'].forEach(function(id){ var t=document.getElementById(id); if(t) t.style.display='none'; });
+    ['voteTile','mealTile','alertTile','rulesTile'].forEach(function(id){ var t=document.getElementById(id); if(t) t.style.display='none'; });
     document.querySelector('.phone').classList.add('locked');
     document.querySelector('.phone').classList.remove('officials');
     showOnly('s-signin');
@@ -1039,10 +1087,20 @@
     var wl=document.getElementById('welcomeLead'); if(wl){ wl.textContent='Staff sign-in — choose your team.'; wl.style.color=''; wl.style.fontWeight=''; }
     renderTeamButtons();
   }
+  var _screenScroll={}, _DRILL={'s-detail':1,'s-sos':1,'s-checkin':1};
   function showOnly(id){
+    var cur=document.querySelector('.screen.active'); var curId=cur?cur.id:'';
+    if(curId && curId!=='s-detail') _screenScroll[curId]=screens.scrollTop;   // remember scroll (not the reused detail screen)
     document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
-    document.getElementById(id).classList.add('active');screens.scrollTop=0;
+    document.getElementById(id).classList.add('active');
+    screens.scrollTop = (id==='s-detail') ? 0 : (_screenScroll[id]||0);        // details open at top; tabs restore where you were
+    if(_DRILL[id] && !_DRILL[curId]){ try{ history.pushState({gcs:1},''); }catch(e){} }   // browser Back steps back in-app
   }
+  function appBack(){ if(window.history && history.state && history.state.gcs){ history.back(); } else { go(lastTab); } }
+  window.addEventListener('popstate', function(){
+    var act=document.querySelector('.screen.active'); var id=act?act.id:'';
+    if(_DRILL[id]){ go(lastTab||'today'); }
+  });
   function setTab(name){document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active',t.dataset.tab===name);});}
   function go(name){
     if(name==='updates' && lastTab!=='updates') _alertsBack=lastTab||'today';
@@ -1093,7 +1151,7 @@
       '<div class="eyebrow" style="color:'+accent+';margin-top:8px">'+esc(typeName)+'</div>'+
       '<div style="font-weight:700;font-style:italic;font-size:22px;color:#fff;line-height:1.15;margin:2px 2px 14px">'+esc(e.title)+'</div>'+
       rows+
-      (isMatch(e)?'<div id="lineupSlot"></div>':'')+
+      (isMatch(e)&&!isSupporter()?'<div id="lineupSlot"></div>':'')+
       (isStaff?'<button class="cibig" onclick="openCheckin('+(e._i)+')"><i class="ti ti-clipboard-check"></i> Open check-in register</button>':'');
     showOnly('s-detail');
     document.getElementById('appTitle').textContent=e.title;
@@ -1358,7 +1416,7 @@
     var head='<div class="travelbox" style="margin:6px 0 4px"><div class="th"><i class="ti ti-trophy"></i> Live scoring &amp; full results</div>'+
       '<div style="font-size:13px;line-height:1.5;color:var(--muted);padding:2px 2px 10px">Fixtures, live scores, team sheets and stats all run through GCS CricHeroes.</div>'+
       '<button class="cta" style="width:100%;justify-content:center;box-sizing:border-box" onclick="openGCS()"><i class="ti ti-external-link"></i> Open GCS CricHeroes</button>'+
-      '<button class="cta" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:8px;background:rgba(119,119,201,.16);color:#9a9ad6;border:1px solid rgba(119,119,201,.4)" onclick="openScoring()"><i class="ti ti-list-numbers"></i> How to score \u2014 step by step</button></div>';
+      '<button class="cta" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:8px;background:rgba(119,119,201,.16);color:#9a9ad6;border:1px solid rgba(119,119,201,.4)" onclick="openScoring()"><i class="ti ti-list-numbers"></i> How to use the GCS Scoring App</button></div>';
     if(officialName){ head+='<div class="readonly" style="justify-content:flex-start;margin:10px 0 2px">'+(officialKind==='umpire'?UMP_SVG:'<i class="ti ti-pencil"></i>')+' '+(officialKind==='umpire'?'Umpire':'Scorer')+' \u00b7 '+esc(officialName)+' <span style="margin-left:auto;color:#9a9ad6;font-weight:700;cursor:pointer" onclick="officialIdentityReset()">Change</span></div>'; }
     if(!ms.length){ host.innerHTML=head+'<div class="readonly" style="justify-content:flex-start;margin-top:12px"><i class="ti ti-info-circle"></i> No matches in the schedule yet.</div>'; return; }
     var h=head;
@@ -1397,9 +1455,16 @@
     h+=info('ti-trophy','Format', m.format||e.sub);
     h+=mapLink('Ground', e.loc||m.ground, [m.ground,m.pitch].filter(Boolean).join(' \u00b7 '));
     h+=info('ti-shirt','Kit', e.kit);
-    h+=info('ti-clock','Start', m.start);
-    h+=info('ti-flag','Finish', m.finish);
     h+=info('ti-circle','Ball', m.ball);
+    var hasTiming = hasVal(m.arrival)||hasVal(m.start)||hasVal(m.lunch)||hasVal(m.finish)||hasVal(m.returnHotel);
+    if(hasTiming){
+      h+='<div class="eyebrow" style="margin-top:16px;color:#9a9ad6"><i class="ti ti-clock-hour-4"></i> Ground timetable</div>';
+      h+=info('ti-walk','Arrival at ground', m.arrival);
+      h+=info('ti-player-play','Start of play', m.start);
+      h+=info('ti-tools-kitchen-2','Lunch', m.lunch);
+      h+=info('ti-flag-checkered','Finish', m.finish);
+      h+=info('ti-bus','Return to hotel', m.returnHotel);
+    }
     h+=officialsLine('umpire','Umpires',[m.umpire1,m.umpire2], m.umpires, 'umpire');
     h+=officialsLine('ti-pencil','Scorers',[m.scorer1,m.scorer2], m.scorers, 'scorer');
     if(m.scorer && !(m.scorer1||m.scorer2)) h+=info('ti-info-circle','Scorer', m.scorer);
@@ -1480,6 +1545,7 @@
   function linkify(t){ var s=esc(String(t)); s=s.replace(/\n/g,'<br>'); s=s.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--teal)">$1</a>'); return s; }
   var TILE_ACCENTS=['acc-orange','acc-teal','acc-purple'];
   function renderMore(){
+    var vts=document.getElementById('voteTileSub'); if(vts) vts.textContent = (isStaff && votingNotOpenYet()) ? ('Opens in '+voteCountdown()) : '';
     var hostEl=document.getElementById('moreDynamic'); if(!hostEl)return;
     var groups=[], idx={};
     (MORECONTENT||[]).forEach(function(r){ var t=r.tile||'Info';
@@ -1491,16 +1557,19 @@
     var h='';
     // 1) Players' Player entry — always reachable here (opens to vote, or shows open/closed state)
     var vc=voteMoreCard(); h+=vc;
-    // 2) Tour info (everything except packing) + Excursions & car hire (staff & supporters)
+    // 2) Tour info (everything except packing) + Flights (everyone) + Excursions & car hire (staff & supporters)
     var showExc=(isStaff||isSupporter()) && excursionsList().length;
-    if(infoIdx.length || showExc){
+    var showFlights=hasFlights();
+    if(infoIdx.length || showExc || showFlights){
       h+='<div class="eyebrow"'+(vc?'':' style="margin-top:6px"')+'>Tour info</div><div class="grid">';
       infoIdx.forEach(function(i,n){ var g=groups[i]; var acc=TILE_ACCENTS[n%TILE_ACCENTS.length];
         h+='<div class="tile '+acc+'" onclick="openMore('+i+')" style="position:relative'+(g.highlight?';border-color:rgba(255,124,26,.6)':'')+'">'+
            (g.highlight?'<span style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--orange)"></span>':'')+
            '<span class="tbadge"><i class="ti '+moreIcon(g.icon)+'"></i></span><div>'+esc(g.tile)+'</div></div>';
       });
-      if(showExc) h+='<div class="tile '+TILE_ACCENTS[infoIdx.length%TILE_ACCENTS.length]+'" onclick="openExcursions()"><span class="tbadge"><i class="ti ti-map-2"></i></span><div>Excursions &amp; car hire</div></div>';
+      var _ex=infoIdx.length;
+      if(showFlights){ h+='<div class="tile '+TILE_ACCENTS[_ex%TILE_ACCENTS.length]+'" onclick="openFlights()"><span class="tbadge"><i class="ti ti-plane"></i></span><div>Flights</div></div>'; _ex++; }
+      if(showExc) h+='<div class="tile '+TILE_ACCENTS[_ex%TILE_ACCENTS.length]+'" onclick="openExcursions()"><span class="tbadge"><i class="ti ti-map-2"></i></span><div>Excursions &amp; car hire</div></div>';
       h+='</div>';
     }
     // Before-you-go essentials (Wise / eSIM / Behaviour contract)
@@ -1838,12 +1907,29 @@
     if(ds){ var d=parseDayLabel(ds,tourYear()); var t=parseClock(SETTINGS.voteCloseTime)||'17:00'; if(d){ var dt=eventTimeOn(d,t); if(dt) return dt; } }
     return finalGameStart();
   }
+  function votingOpenAt(){
+    var ds=(SETTINGS.voteOpenDate||'').trim(); if(!ds) return null;
+    var d=parseDayLabel(ds,tourYear()); var t=parseClock(SETTINGS.voteOpenTime)||'09:00';
+    if(d){ var dt=eventTimeOn(d,t); if(dt) return dt; } return null;
+  }
+  function votingNotOpenYet(){ var o=votingOpenAt(); return !!(o && Date.now()<o.getTime()); }
+  function voteCountdown(){
+    var o=votingOpenAt(); if(!o) return ''; var ms=o.getTime()-Date.now(); if(ms<=0) return '';
+    var mins=Math.floor(ms/60000), d=Math.floor(mins/1440), h=Math.floor((mins%1440)/60), m=mins%60;
+    if(d>0) return d+'d '+h+'h'; if(h>0) return h+'h '+m+'m'; return Math.max(1,m)+'m';
+  }
   function votingClosedByTime(){ var c=votingCloseAt(); return !!(c && Date.now()>=c.getTime()); }
   function votingAutoOpen(){ var c=votingCloseAt(); if(!c) return false; var now=Date.now(); return now>=c.getTime()-86400000 && now<c.getTime(); }
-  function votingOpenNow(){ if(votingClosedByTime()) return false; return votingForceOpen() || votingAutoOpen(); }
+  function votingOpenNow(){ if(votingClosedByTime()) return false; var o=votingOpenAt(); if(o) return Date.now()>=o.getTime(); return votingForceOpen() || votingAutoOpen(); }
   function buildVoteSquads(){ VOTE_SQUADS=[]; (TEAMS_LIST||[]).forEach(function(t){ var pl=((PLAYERS||{})[t]||[]).filter(function(n){return n&&n.trim() && !(t===currentSquad && currentPlayer && n===currentPlayer);}); if(pl.length) VOTE_SQUADS.push({team:t,players:pl}); }); }
-  function voteCardHTML(){   // prominent card on the schedule page — only while voting is open
-    if(isStaff || isSupporter() || !votingOpenNow()) return '';
+  function voteCardHTML(){   // prominent card on the schedule page
+    if(isStaff || isSupporter()) return '';
+    if(votingNotOpenYet()){
+      buildVoteSquads(); if(!VOTE_SQUADS.length) return '';
+      return '<div class="votecard" onclick="openVote()"><span class="vcicon"><i class="ti ti-clock-hour-4"></i></span>'+
+        '<div class="vcbody"><b>Players\u2019 Player</b><span>Voting opens in '+voteCountdown()+'</span></div><i class="ti ti-chevron-right vcarr"></i></div>';
+    }
+    if(!votingOpenNow()) return '';
     buildVoteSquads(); if(!VOTE_SQUADS.length) return '';
     loadBallot();
     var done=voteSubmitted();
@@ -1857,7 +1943,7 @@
     buildVoteSquads(); if(!VOTE_SQUADS.length) return '';
     loadBallot();
     var done=voteSubmitted(), open=votingOpenNow(), closed=votingClosedByTime();
-    var sub = done ? 'Your votes are submitted \u2713' : (open ? 'Vote for the standout player in each squad' : (closed ? 'Voting has closed' : 'Opens 24h before the final game'));
+    var sub = done ? 'Your votes are submitted \u2713' : (open ? 'Vote for the standout player in each squad' : (closed ? 'Voting has closed' : (votingNotOpenYet() ? 'Opens in '+voteCountdown() : 'Opens 24h before the final game')));
     return '<div class="votecard'+(done?' done':'')+'" style="margin-top:16px" onclick="openVote()"><span class="vcicon"><i class="ti ti-trophy"></i></span>'+
       '<div class="vcbody"><b>Players\u2019 Player</b><span>'+sub+'</span></div><i class="ti ti-chevron-right vcarr"></i></div>';
   }
@@ -1866,10 +1952,10 @@
     showOnly('s-detail'); document.getElementById('appTitle').textContent="Players\u2019 Player";
     if(voteSubmitted()){ document.getElementById('appSub').textContent='Submitted'; renderVoteDone(); return; }
     if(!votingOpenNow()){
-      var closed=votingClosedByTime();
+      var closed=votingClosedByTime(), soon=votingNotOpenYet();
       document.getElementById('appSub').textContent=closed?'Closed':'Not open yet';
-      document.getElementById('detailBody').innerHTML='<div class="readonly" style="justify-content:flex-start;margin-top:14px"><i class="ti ti-'+(closed?'lock':'clock')+'"></i> '+
-        (closed?'Voting has closed — results are with the staff.':'Voting opens 24 hours before the final game. Check back then!')+'</div>';
+      document.getElementById('detailBody').innerHTML='<div class="readonly" style="justify-content:flex-start;margin-top:14px"><i class="ti ti-'+(closed?'lock':'clock-hour-4')+'"></i> '+
+        (closed?'Voting has closed — results are with the staff.':(soon?('Players\u2019 Player voting opens in '+voteCountdown()+'. Check back then!'):'Voting opens 24 hours before the final game. Check back then!'))+'</div>';
       return;
     }
     document.getElementById('appSub').textContent='Vote — one per squad'; renderVote();
@@ -2495,9 +2581,6 @@
     h+=paperCard({icon:'ti-file-certificate', title:'Consent to travel',
       body:'Required for any player <b>under 18 travelling without their own parent or guardian</b>. To complete it you\u2019ll need:<br>&bull; the signed consent-to-travel form<br>&bull; a copy of <b>both parents\u2019 / guardians\u2019 passports</b> with the signature page clearly visible<br>&bull; the player\u2019s <b>original birth certificate</b>',
       url:SETTINGS.consentUrl, btn:'Open the consent form'});
-    h+=paperCard({icon:'ti-clipboard-check', title:'Handover of care',
-      body:'Confirms your child is handed into the care of the tour staff for the duration of the tour. A parent or guardian completes this before departure.',
-      url:SETTINGS.handoverUrl, btn:'Complete the handover form'});
     h+=paperCard({icon:'ti-id-badge-2', title:'Visas',
       body:'Check the entry requirements for <b>'+esc(country)+'</b> and apply for any visa you need in good time. Requirements depend on your nationality, so check the official page for your passport.',
       url:SETTINGS.visaUrl, btn:'Check visa requirements'});
@@ -2523,41 +2606,89 @@
     steps.forEach(function(st,i){ h+='<div class="hstep"><span class="hnum" style="color:'+accent+'">'+(i+1)+'</span><div><b>'+st[0]+'</b> '+st[1]+'</div></div>'; });
     return h+'</div></details>';
   }
-  function openHelp(){
-    showOnly('s-detail'); document.getElementById('appTitle').textContent='Help & how-to'; document.getElementById('appSub').textContent='Using the app & FAQ';
+  function openHowTo(){
+    showOnly('s-detail'); document.getElementById('appTitle').textContent='How to use'; document.getElementById('appSub').textContent='Getting around the app';
     var h='';
     if(isStaff){
       h+=helpGuide(true,'#7bdcc0','ti-whistle','Using the app \u2014 staff & coaches',[
         ['Squad list (confidential).','Each player\u2019s medical, dietary and room info, with a tap-to-call button for their parent/guardian. Tournament staff get team tabs to switch squads.'],
-        ['Line-ups.','Set the batting order for a match and share it straight to the scorer.'],
+        ['Line-ups.','Set the batting order for a match, share it with your squad, and send it straight to the scorer.'],
         ['Meal pre-orders.','See who\u2019s ordered and who hasn\u2019t, per team (team tabs for tournament staff), so you can chase stragglers.'],
         ['Send alerts.','Push an announcement to your whole squad, a single player, or just the other coaches \u2014 it pops up in their app and they have to acknowledge it.'],
         ['Officials & excursions.','Umpire and scorer contacts per fixture; any optional activities or car hire show here for staff and supporters.'],
         ['Organisers.','The schedule, squads, alerts and settings are managed in the separate admin console.']
       ]);
-      h+='<details class="hcard" style="border-color:#9a9ad666"><summary><span class="tbadge" style="background:#9a9ad628"><i class="ti ti-clipboard-text" style="color:#9a9ad6"></i></span><span class="httl">Scoring the game \u2014 for scorers</span><i class="ti ti-chevron-down hchev"></i></summary><div class="hbody">'+scoringStepsHTML()+'</div></details>';
+      h+='<details class="hcard" style="border-color:#9a9ad666"><summary><span class="tbadge" style="background:#9a9ad628"><i class="ti ti-clipboard-text" style="color:#9a9ad6"></i></span><span class="httl">How to use the GCS Scoring App</span><i class="ti ti-chevron-down hchev"></i></summary><div class="hbody">'+scoringStepsHTML()+'</div></details>';
     } else {
       h+=helpGuide(true,'#ff9d52','ti-user','Using the app \u2014 players & supporters',[
         ['Today & Schedule.','Today shows what\u2019s on now; Schedule has the full day-by-day plan. Tap a match for the venue map and the line-up once it\u2019s posted.'],
-        ['Voting.','When voting\u2019s open it appears on the home screen \u2014 cast your votes before the cut-off.'],
-        ['Meals.','Pick your meals from the menus before each deadline so the kitchen can cater for everyone.'],
+        ['Voting.','When Players\u2019 Player voting opens it appears on the home screen. Pick one player from each squad before the cut-off.'],
+        ['Meals.','When menus are set up, pick your meals before each deadline so the kitchen can cater for everyone.'],
         ['Live scores & streams.','Follow live scores, stats and streams on the Global Cricket Series platform.'],
         ['Before you go.','Travel money, Mobile data, Paperwork, the Shop and your Packing list all live under More.'],
         ['Install it.','Use Add to home screen so it opens like a normal app.']
       ]);
     }
-    var faq=(FAQ||[]).filter(function(f){return f&&(f.q||f.question);});
-    if(faq.length){
-      h+='<div class="eyebrow" style="margin-top:18px"><i class="ti ti-messages"></i> Frequently asked questions</div>';
-      var cats=[], byCat={};
-      faq.forEach(function(f){ var c=(f.category||f.cat||'General').trim()||'General'; if(cats.indexOf(c)<0){cats.push(c);byCat[c]=[];} byCat[c].push(f); });
-      cats.forEach(function(c){
-        h+='<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:14px 2px 6px">'+esc(c)+'</div>';
-        byCat[c].forEach(function(f){
-          h+='<details class="faqitem"><summary><span class="fq">'+esc(f.q||f.question||'')+'</span><i class="ti ti-chevron-down hchev"></i></summary><div class="fa">'+faqText(f.a||f.answer||'')+'</div></details>';
-        });
+    document.getElementById('detailBody').innerHTML=h;
+  }
+  function hasFlights(){ return hasVal(SETTINGS.outbound)||hasVal(SETTINGS.inbound); }
+  function faqVisible(f){
+    var cond=String((f&&(f.cond||f.showif||f.show))||'').trim().toLowerCase();
+    if(!cond) return true;
+    if(cond.indexOf('meal')>=0) return !!(MEALS&&MEALS.length);
+    if(cond.indexOf('flight')>=0||cond.indexOf('luggage')>=0) return hasFlights();
+    return true;
+  }
+  function openFAQ(){
+    showOnly('s-detail'); document.getElementById('appTitle').textContent='FAQ'; document.getElementById('appSub').textContent=(SETTINGS.country||SETTINGS.destination||'')+' \u00b7 frequently asked questions';
+    var faq=(FAQ||[]).filter(function(f){return f&&(f.q||f.question)&&faqVisible(f);});
+    var h='';
+    if(!faq.length){ h='<div class="readonly" style="justify-content:flex-start;margin-top:14px"><i class="ti ti-info-circle"></i> No FAQs have been added for this tour yet.</div>'; document.getElementById('detailBody').innerHTML=h; return; }
+    var cats=[], byCat={};
+    faq.forEach(function(f){ var c=(f.category||f.cat||'General').trim()||'General'; if(cats.indexOf(c)<0){cats.push(c);byCat[c]=[];} byCat[c].push(f); });
+    cats.forEach(function(c){
+      h+='<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:14px 2px 6px">'+esc(c)+'</div>';
+      byCat[c].forEach(function(f){
+        h+='<details class="faqitem"><summary><span class="fq">'+esc(f.q||f.question||'')+'</span><i class="ti ti-chevron-down hchev"></i></summary><div class="fa">'+faqText(f.a||f.answer||'')+'</div></details>';
       });
-    }
+    });
+    document.getElementById('detailBody').innerHTML=h;
+  }
+  function openRules(){
+    showOnly('s-detail'); document.getElementById('appTitle').textContent='Tournament rules'; document.getElementById('appSub').textContent='Playing conditions & format';
+    var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti ti-gavel"></i> Tournament rules</div>'+
+      '<div style="font-size:14px;line-height:1.65;color:var(--muted);padding:4px 2px 12px">The playing conditions, match formats and competition rules for this tour.</div>'+
+      (hasVal(SETTINGS.rulesUrl)
+        ? '<a class="cta" href="'+attr(normUrl(SETTINGS.rulesUrl))+'" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center;box-sizing:border-box"><i class="ti ti-external-link"></i> Open the tournament rules</a>'
+        : '<div class="readonly" style="justify-content:flex-start"><i class="ti ti-headset"></i> Contact TCA Sports Tours if you need this.</div>')+
+      '</div>';
+    document.getElementById('detailBody').innerHTML=h;
+  }
+  function flightAirline(num){
+    num=String(num||'').trim().toUpperCase().replace(/\s+/g,'');
+    var m=num.match(/^([A-Z]{2,3}|[A-Z]\d|\d[A-Z])/); var code=m?m[1]:'';
+    var map={KL:'KLM',BA:'British Airways',U2:'easyJet',EZY:'easyJet',FR:'Ryanair',LS:'Jet2',VS:'Virgin Atlantic',AF:'Air France',LH:'Lufthansa',TK:'Turkish Airlines',EK:'Emirates',QR:'Qatar Airways',W6:'Wizz Air',HV:'Transavia',TO:'Transavia',DL:'Delta',AA:'American Airlines',UA:'United',IB:'Iberia',AZ:'ITA Airways',SK:'SAS',EW:'Eurowings',VY:'Vueling',TP:'TAP Air Portugal',SN:'Brussels Airlines',LX:'SWISS',OS:'Austrian',AY:'Finnair',DY:'Norwegian'};
+    return map[code]||'';
+  }
+  function _fpair(k,v){ return '<div style="min-width:78px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:700">'+k+'</div><div style="font-size:15px;color:#fff;font-weight:600">'+esc(v)+'</div></div>'; }
+  function flightLeg(label,icon,num,date,time,route){
+    if(!hasVal(num) && !hasVal(route) && !hasVal(time)) return '';
+    var air=flightAirline(num);
+    var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti '+icon+'"></i> '+esc(label)+(air?' \u00b7 '+esc(air):'')+'</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:16px;padding:4px 2px '+(hasVal(route)?'8':'2')+'px">';
+    if(hasVal(num)) h+=_fpair('Flight', String(num).toUpperCase());
+    if(hasVal(date)) h+=_fpair('Date', date);
+    if(hasVal(time)) h+=_fpair('Departs', time);
+    h+='</div>';
+    if(hasVal(route)) h+='<div style="font-size:14px;color:#fff;padding:2px 2px"><i class="ti ti-route" style="color:var(--teal)"></i> '+esc(route)+'</div>';
+    return h+'</div>';
+  }
+  function openFlights(){
+    showOnly('s-detail'); document.getElementById('appTitle').textContent='Flights'; document.getElementById('appSub').textContent='Getting there & back';
+    var h=flightLeg('Outbound','ti-plane-departure',SETTINGS.outbound,SETTINGS.outboundDate,SETTINGS.outboundTime,SETTINGS.outboundRoute)+
+          flightLeg('Return','ti-plane-arrival',SETTINGS.inbound,SETTINGS.inboundDate,SETTINGS.inboundTime,SETTINGS.inboundRoute);
+    if(!h) h='<div class="readonly" style="justify-content:flex-start;margin-top:14px"><i class="ti ti-info-circle"></i> Flight details haven\u2019t been added yet.</div>';
+    else h+='<div style="display:flex;gap:7px;align-items:flex-start;font-size:12px;color:var(--faint);margin-top:12px;line-height:1.5"><i class="ti ti-info-circle" style="color:#ff9d52;font-size:14px;margin-top:1px"></i><span>Times are local. Always check your airline app for the latest gate, times and any changes.</span></div>';
     document.getElementById('detailBody').innerHTML=h;
   }
   function numSteps(steps,accent){
@@ -2574,7 +2705,7 @@
     return h;
   }
   function openScoring(){
-    showOnly('s-detail'); document.getElementById('appTitle').textContent='Scoring'; document.getElementById('appSub').textContent='GCS Scoring App';
+    showOnly('s-detail'); document.getElementById('appTitle').textContent='GCS Scoring App'; document.getElementById('appSub').textContent='Step-by-step for scorers';
     var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti ti-clipboard-text"></i> Scoring on the GCS app</div>'+
       '<div style="font-size:13px;line-height:1.6;color:var(--muted);padding:2px 2px 10px">Step-by-step for scorers using the Global Cricket Series scoring app, including what to do if rain interrupts play.</div></div>'+
       '<div style="padding:4px 2px 0">'+scoringStepsHTML()+'</div>';
@@ -2846,9 +2977,21 @@
     if(a&&a.kind==='lineup'&&a.evKey) openLineupFromAlert(a.evKey);
   }
   function ackAlert(){ if(curAlert)ackId(curAlert.id); document.getElementById('alertModal').style.display='none'; curAlert=null; renderAlertsFeed(); setTimeout(showNextAlert,150); }
+  function maybeAnnounceVoteOpen(list){
+    try{
+      var o=votingOpenAt(); if(!o) return; if(Date.now()<o.getTime()) return; if(votingClosedByTime()) return;
+      if(isSupporter()) return;                       // supporters don't trigger or receive this
+      var id='voteopen-'+o.getTime();
+      if((list||[]).some(function(a){return a&&a.id===id;})) return;   // already announced
+      var a={id:id, team:'all', kind:'vote', text:'Players\u2019 Player voting is now open \u2014 tap to cast your votes.', ts:Date.now()};
+      var next=[a].concat(list||[]).slice(0,20);
+      fetch('/.netlify/functions/tour?type=alerts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(next)})
+        .then(function(){ ALERTS=next; renderAlertsFeed(); showNextAlert(); }).catch(function(){});
+    }catch(e){}
+  }
   function fetchAlerts(){
     getJSON('?type=alerts').then(function(r){return r.ok?r.json():[];})
-      .then(function(a){ if(Array.isArray(a))ALERTS=a; renderAlertsFeed(); showNextAlert(); }).catch(function(){});
+      .then(function(a){ if(Array.isArray(a))ALERTS=a; maybeAnnounceVoteOpen(ALERTS); renderAlertsFeed(); showNextAlert(); }).catch(function(){});
   }
   function startAlerts(){
     fetchAlerts();
