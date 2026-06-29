@@ -166,6 +166,13 @@
   .readonly i{font-size:13px}
 
   .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .moresec{border-radius:16px;padding:11px 11px 13px;margin:0 0 14px}
+  .moresec.sec-teal{background:rgba(81,206,167,.085);border:1px solid rgba(81,206,167,.22)}
+  .moresec.sec-orange{background:rgba(255,124,26,.085);border:1px solid rgba(255,124,26,.22)}
+  .moresec.sec-purple{background:rgba(119,119,201,.10);border:1px solid rgba(119,119,201,.26)}
+  .msectitle{font-size:16px;font-weight:700;font-style:italic;color:#fff;margin:3px 2px 11px}
+  .moresec .grid{margin:0}
+  .moresec>.eyebrow{display:none}
   .tile{background:var(--surface);border:1px solid var(--surface-line);border-radius:14px;padding:14px 6px 12px;text-align:center;cursor:pointer;
     transition:transform .13s ease,background .13s ease,border-color .13s ease,box-shadow .13s ease}
   .tile:active{transform:scale(.95);background:rgba(255,255,255,.10);box-shadow:0 6px 18px rgba(0,0,0,.35)}
@@ -495,7 +502,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ae · rules-tab-roles-roombox</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ag · tourinfo-faq-hotel-tidy</div>
     </section>
 
     <!-- TODAY -->
@@ -549,18 +556,18 @@
         <div><b>Get help now</b><span>One tap &rarr; local emergency, tour manager &amp; coaches</span></div>
       </div>
 
-      <div class="eyebrow">Help &amp; people</div>
+      <div class="moresec sec-teal">
+      <div class="msectitle">Help &amp; people</div>
       <div class="grid">
         <div class="tile acc-red" onclick="openSOS()"><span class="tbadge"><i class="ti ti-phone-call"></i></span><div>Emergency contacts</div></div>
         <div class="tile acc-teal" onclick="openStaff()"><span class="tbadge"><i class="ti ti-user-star"></i></span><div>Staff &amp; coaches</div></div>
         <div class="tile acc-purple" onclick="openHandover()"><span class="tbadge"><i class="ti ti-heart-handshake"></i></span><div>Handover of Care</div></div>
         <div class="tile acc-orange" onclick="openHowTo()"><span class="tbadge"><i class="ti ti-help-circle"></i></span><div>How to use</div></div>
-        <div class="tile acc-teal" onclick="openFAQ()"><span class="tbadge"><i class="ti ti-messages"></i></span><div>FAQ</div></div>
-        <div class="tile acc-teal" id="hotelTile" style="display:none" onclick="openHotelMap()"><span class="tbadge"><i class="ti ti-building"></i></span><div>Hotel &middot; Map</div></div>
         <div class="tile acc-orange" id="squadTile" style="display:none" onclick="openRoster()"><span class="tbadge"><i class="ti ti-clipboard-list"></i></span><div>Squad list</div></div>
         <div class="tile acc-purple" id="voteTile" style="display:none" onclick="openVoteResults()"><span class="tbadge"><i class="ti ti-trophy"></i></span><div>Players&rsquo; Player<span id="voteTileSub" style="display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px"></span></div></div>
         <div class="tile acc-teal" id="mealTile" style="display:none" onclick="openMealOrders()"><span class="tbadge"><i class="ti ti-tools-kitchen-2"></i></span><div>Meal pre-orders</div></div>
         <div class="tile acc-orange" id="alertTile" style="display:none" onclick="openSendAlert()"><span class="tbadge"><i class="ti ti-send"></i></span><div>Send alert</div></div>
+      </div>
       </div>
 
       <div id="moreDynamic"></div>
@@ -1464,7 +1471,15 @@
   function offMatchBtn(e){
     var mine=officialOwns(e);
     var sub=esc(e.time)+((e.meta&&e.meta.format)?(' \u00b7 '+esc(e.meta.format)):(e.sub?(' \u00b7 '+esc(e.sub)):''));
-    return '<button class="squadopt" onclick="openOfficialMatch('+e._i+')"><span class="dot" style="background:'+(mine?'rgba(119,119,201,.2)':'rgba(255,124,26,.16)')+';color:'+(mine?'#9a9ad6':'#ff9d52')+'"><i class="ti ti-ball-baseball"></i></span><span style="flex:1"><b>'+esc(e.title)+'</b><span>'+sub+'</span></span><i class="ti ti-chevron-right arr"></i></button>';
+    var teams=(e.teams&&e.teams.length)?e.teams:[e.teamA,e.teamB];
+    var squad=teams.filter(Boolean).map(function(t){
+      return '<div class="eyebrow" style="margin:8px 2px 4px;color:#9a9ad6"><i class="ti ti-users"></i> '+esc(t)+'</div>'+officialSquadHTML(t);
+    }).join('');
+    return '<div style="margin-bottom:8px">'+
+      '<button class="squadopt" style="margin:0" onclick="openOfficialMatch('+e._i+')"><span class="dot" style="background:'+(mine?'rgba(119,119,201,.2)':'rgba(255,124,26,.16)')+';color:'+(mine?'#9a9ad6':'#ff9d52')+'"><i class="ti ti-ball-baseball"></i></span><span style="flex:1"><b>'+esc(e.title)+'</b><span>'+sub+'</span></span><i class="ti ti-chevron-right arr"></i></button>'+
+      '<button class="rollbtn" style="width:100%;justify-content:center;margin-top:6px" onclick="toggleSquadBox(this)"><i class="ti ti-users"></i> See full squad &amp; numbers</button>'+
+      '<div style="display:none;margin-top:6px">'+squad+'</div>'+
+    '</div>';
   }
   function renderOfficialList(){
     var host=document.getElementById('offMatchList'); if(!host) return;
@@ -1603,6 +1618,8 @@
   }
   function linkify(t){ var s=esc(String(t)); s=s.replace(/\n/g,'<br>'); s=s.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--teal)">$1</a>'); return s; }
   var TILE_ACCENTS=['acc-orange','acc-teal','acc-purple'];
+  function hasHotel(){ return isSupporter() ? !!(SETTINGS.supporterHotel||SETTINGS.supporterHotelAddress) : !!(SETTINGS&&SETTINGS.hotelAddress); }
+  function moreTileHidden(t){ var k=String(t||'').trim().toLowerCase(); return k==='spending money'||k==='plug'||k==='plugs'||k==='plugs & power'||k==='plugs and power'||k==='plugs & adaptors'||k==='plugs & power'; }
   function renderMore(){
     var vts=document.getElementById('voteTileSub'); if(vts) vts.textContent = (isStaff && votingNotOpenYet()) ? ('Opens in '+voteCountdown()) : '';
     var hostEl=document.getElementById('moreDynamic'); if(!hostEl)return;
@@ -1612,32 +1629,32 @@
       var g=groups[idx[t]]; g.rows.push(r); if(r.highlight)g.highlight=true; if(!g.icon&&r.icon)g.icon=r.icon; });
     MOREGROUPS=groups;
     var infoIdx=[], packIdx=[];
-    groups.forEach(function(g,i){ (isPackingTile(g.tile)?packIdx:infoIdx).push(i); });
+    groups.forEach(function(g,i){ if(!isPackingTile(g.tile) && moreTileHidden(g.tile)) return; (isPackingTile(g.tile)?packIdx:infoIdx).push(i); });
     var h='';
     // 1) Players' Player entry — always reachable here (opens to vote, or shows open/closed state)
     var vc=voteMoreCard(); h+=vc;
-    // 2) Tour info (everything except packing) + Flights (everyone) + Excursions & car hire (staff & supporters)
+    // 2) Tour info: spreadsheet tiles + Hotel + FAQ (everyone) + Flights (everyone) + Excursions (staff & supporters)
     var showExc=(isStaff||isSupporter()) && excursionsList().length;
     var showFlights=hasFlights();
-    if(infoIdx.length || showExc || showFlights){
-      h+='<div class="eyebrow"'+(vc?'':' style="margin-top:6px"')+'>Tour info</div><div class="grid">';
-      infoIdx.forEach(function(i,n){ var g=groups[i]; var acc=TILE_ACCENTS[n%TILE_ACCENTS.length];
-        h+='<div class="tile '+acc+'" onclick="openMore('+i+')" style="position:relative'+(g.highlight?';border-color:rgba(255,124,26,.6)':'')+'">'+
-           (g.highlight?'<span style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--orange)"></span>':'')+
-           '<span class="tbadge"><i class="ti '+moreIcon(g.icon)+'"></i></span><div>'+esc(g.tile)+'</div></div>';
-      });
-      var _ex=infoIdx.length;
-      if(showFlights){ h+='<div class="tile '+TILE_ACCENTS[_ex%TILE_ACCENTS.length]+'" onclick="openFlights()"><span class="tbadge"><i class="ti ti-plane"></i></span><div>Flights</div></div>'; _ex++; }
-      if(showExc) h+='<div class="tile '+TILE_ACCENTS[_ex%TILE_ACCENTS.length]+'" onclick="openExcursions()"><span class="tbadge"><i class="ti ti-map-2"></i></span><div>Excursions &amp; car hire</div></div>';
-      h+='</div>';
-    }
+    var showHotel=hasHotel();
+    h+='<div class="moresec sec-orange"><div class="msectitle">Tour info</div><div class="grid">';
+    infoIdx.forEach(function(i,n){ var g=groups[i]; var acc=TILE_ACCENTS[n%TILE_ACCENTS.length];
+      h+='<div class="tile '+acc+'" onclick="openMore('+i+')" style="position:relative'+(g.highlight?';border-color:rgba(255,124,26,.6)':'')+'">'+
+         (g.highlight?'<span style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--orange)"></span>':'')+
+         '<span class="tbadge"><i class="ti '+moreIcon(g.icon)+'"></i></span><div>'+esc(g.tile)+'</div></div>';
+    });
+    if(showHotel) h+='<div class="tile acc-teal" onclick="openHotelMap()"><span class="tbadge"><i class="ti ti-building"></i></span><div>Hotel &middot; Map</div></div>';
+    h+='<div class="tile acc-purple" onclick="openFAQ()"><span class="tbadge"><i class="ti ti-messages"></i></span><div>FAQ</div></div>';
+    if(showFlights) h+='<div class="tile acc-orange" onclick="openFlights()"><span class="tbadge"><i class="ti ti-plane"></i></span><div>Flights</div></div>';
+    if(showExc) h+='<div class="tile acc-teal" onclick="openExcursions()"><span class="tbadge"><i class="ti ti-map-2"></i></span><div>Excursions &amp; car hire</div></div>';
+    h+='</div></div>';
     // Before-you-go essentials (Wise / eSIM / Behaviour contract)
-    h+='<div class="eyebrow">Before you go</div><div class="grid">';
+    h+='<div class="moresec sec-purple"><div class="msectitle">Before you go</div><div class="grid">';
     h+='<div class="tile acc-teal" onclick="openTravelMoney()"><span class="tbadge"><i class="ti ti-credit-card"></i></span><div>Travel money</div></div>';
     h+='<div class="tile acc-orange" onclick="openEsim()"><span class="tbadge"><i class="ti ti-device-mobile"></i></span><div>Mobile data</div></div>';
     h+='<div class="tile acc-teal" onclick="openPaperwork()"><span class="tbadge"><i class="ti ti-files"></i></span><div>Paperwork</div></div>';
     if(showShop()) h+='<div class="tile acc-purple" onclick="openShop()"><span class="tbadge"><i class="ti ti-shopping-bag"></i></span><div>Shop &middot; kit &amp; merch</div></div>';
-    h+='</div>';
+    h+='</div></div>';
     // 3) + 4) Pre-order menus and the Packing list. Before the tour starts the packing
     // list is the priority (menus below it); once the tour is under way, menus come first.
     var mealsHTML=mealsSectionHTML();
@@ -1647,7 +1664,7 @@
       var cats=[];
       packIdx.forEach(function(gi){ packCats(MOREGROUPS[gi]).forEach(function(c,ci){ cats.push({gi:gi,ci:ci,c:c}); }); });
       if(cats.length){
-        packHTML+='<div id="packAnchor"></div><div class="eyebrow">Packing list</div><div class="grid">';
+        packHTML+='<div id="packAnchor"></div><div class="moresec sec-teal"><div class="msectitle">Packing list</div><div class="grid">';
         cats.forEach(function(o,n){
           var st=catStatus(o.c), acc=TILE_ACCENTS[n%TILE_ACCENTS.length];
           var dot = st.state==='done'?'var(--teal)':(st.state==='part'?'#ffb74d':'#ff5a5a');
@@ -1657,7 +1674,7 @@
              '<div>'+esc(o.c.title)+'</div>'+
              '<span class="ptcount">'+st.done+'/'+st.total+'</span></div>';
         });
-        packHTML+='</div>';
+        packHTML+='</div></div>';
       }
     }
     h += tourStarted() ? (mealsHTML + packHTML) : (packHTML + mealsHTML);
@@ -1969,15 +1986,21 @@
     var d=parseDayLabel(ds,tourYear()); var t=parseClock(SETTINGS.voteOpenTime)||'09:00';
     if(d){ var dt=eventTimeOn(d,t); if(dt) return dt; } return null;
   }
-  function votingNotOpenYet(){ var o=votingOpenAt(); return !!(o && Date.now()<o.getTime()); }
+  function lastMatchDay(){ var md=0; (EVENTS||[]).forEach(function(e){ if(isMatch(e) && e.day>md) md=e.day; }); return md; }
+  function lastMatchDayStart(){
+    var md=lastMatchDay(); if(!md) return null;
+    var d=parseDayLabel(DAYS[md], tourYear()); if(!d) return null;
+    return new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,0,0,0);   // 00:00 on the last day with games
+  }
+  function effectiveVoteOpenAt(){ return votingOpenAt() || lastMatchDayStart(); }   // explicit time, else auto: start of last match day
+  function votingNotOpenYet(){ if(votingForceOpen()) return false; var o=effectiveVoteOpenAt(); return !!(o && Date.now()<o.getTime()); }
   function voteCountdown(){
-    var o=votingOpenAt(); if(!o) return ''; var ms=o.getTime()-Date.now(); if(ms<=0) return '';
+    var o=effectiveVoteOpenAt(); if(!o) return ''; var ms=o.getTime()-Date.now(); if(ms<=0) return '';
     var mins=Math.floor(ms/60000), d=Math.floor(mins/1440), h=Math.floor((mins%1440)/60), m=mins%60;
     if(d>0) return d+'d '+h+'h'; if(h>0) return h+'h '+m+'m'; return Math.max(1,m)+'m';
   }
   function votingClosedByTime(){ var c=votingCloseAt(); return !!(c && Date.now()>=c.getTime()); }
-  function votingAutoOpen(){ var c=votingCloseAt(); if(!c) return false; var now=Date.now(); return now>=c.getTime()-86400000 && now<c.getTime(); }
-  function votingOpenNow(){ if(votingClosedByTime()) return false; var o=votingOpenAt(); if(o) return Date.now()>=o.getTime(); return votingForceOpen() || votingAutoOpen(); }
+  function votingOpenNow(){ if(votingClosedByTime()) return false; if(votingForceOpen()) return true; var o=effectiveVoteOpenAt(); return !!(o && Date.now()>=o.getTime()); }
   function buildVoteSquads(){ VOTE_SQUADS=[]; (TEAMS_LIST||[]).forEach(function(t){ var pl=((PLAYERS||{})[t]||[]).filter(function(n){return n&&n.trim() && !(t===currentSquad && currentPlayer && n===currentPlayer);}); if(pl.length) VOTE_SQUADS.push({team:t,players:pl}); }); }
   function voteCardHTML(){   // prominent card on the schedule page
     if(isStaff || isSupporter()) return '';
@@ -2000,7 +2023,7 @@
     buildVoteSquads(); if(!VOTE_SQUADS.length) return '';
     loadBallot();
     var done=voteSubmitted(), open=votingOpenNow(), closed=votingClosedByTime();
-    var sub = done ? 'Your votes are submitted \u2713' : (open ? 'Vote for the standout player in each squad' : (closed ? 'Voting has closed' : (votingNotOpenYet() ? 'Opens in '+voteCountdown() : 'Opens 24h before the final game')));
+    var sub = done ? 'Your votes are submitted \u2713' : (open ? 'Vote for the standout player in each squad' : (closed ? 'Voting has closed' : (votingNotOpenYet() ? 'Opens in '+voteCountdown() : 'Opens on the last day of games')));
     return '<div class="votecard'+(done?' done':'')+'" style="margin-top:16px" onclick="openVote()"><span class="vcicon"><i class="ti ti-trophy"></i></span>'+
       '<div class="vcbody"><b>Players\u2019 Player</b><span>'+sub+'</span></div><i class="ti ti-chevron-right vcarr"></i></div>';
   }
@@ -2012,7 +2035,7 @@
       var closed=votingClosedByTime(), soon=votingNotOpenYet();
       document.getElementById('appSub').textContent=closed?'Closed':'Not open yet';
       document.getElementById('detailBody').innerHTML='<div class="readonly" style="justify-content:flex-start;margin-top:14px"><i class="ti ti-'+(closed?'lock':'clock-hour-4')+'"></i> '+
-        (closed?'Voting has closed — results are with the staff.':(soon?('Players\u2019 Player voting opens in '+voteCountdown()+'. Check back then!'):'Voting opens 24 hours before the final game. Check back then!'))+'</div>';
+        (closed?'Voting has closed — results are with the staff.':(soon?('Players\u2019 Player voting opens in '+voteCountdown()+'. Check back then!'):'Voting opens on the last day of games. Check back then!'))+'</div>';
       return;
     }
     document.getElementById('appSub').textContent='Vote — one per squad'; renderVote();
@@ -2154,7 +2177,7 @@
     if(isSupporter() && !(SETTINGS&&SETTINGS.supporterMeals)) return '';   // supporters follow the tour; ordering is players-only unless the organiser enables it
     if(!MEALS||!MEALS.length) return '';
     loadOrder();
-    var h='<div class="eyebrow">Preorder menus</div>';
+    var h='<div class="moresec sec-orange"><div class="msectitle">Preorder menus</div>';
     MEALS.forEach(function(m,i){
       var cs=mealCourses(m), key=mealKey(m), picks=(_order.orders&&_order.orders[key])||{};
       var chosen=cs.filter(function(c){return picks[c];}).length;
@@ -2163,7 +2186,7 @@
       h+='<div class="packstat meal'+(sent?' done':'')+'" onclick="openMeal('+i+')"><span class="psicon"><i class="ti '+(sent?'ti-circle-check':'ti-tools-kitchen-2')+'"></i></span>'+
          '<div class="psbody"><b>'+esc(m.restaurant||'Menu')+'</b><span>'+sub+'</span></div><i class="ti ti-chevron-right psarr"></i></div>';
     });
-    return h;
+    return h+'</div>';
   }
   function openMeal(i){
     var m=MEALS[i]; if(!m)return; _mealIdx=i; loadOrder();
@@ -3135,7 +3158,7 @@
   function ackAlert(){ if(curAlert)ackId(curAlert.id); document.getElementById('alertModal').style.display='none'; curAlert=null; renderAlertsFeed(); setTimeout(showNextAlert,150); }
   function maybeAnnounceVoteOpen(list){
     try{
-      var o=votingOpenAt(); if(!o) return; if(Date.now()<o.getTime()) return; if(votingClosedByTime()) return;
+      var o=effectiveVoteOpenAt(); if(!o) return; if(Date.now()<o.getTime()) return; if(votingClosedByTime()) return;
       if(isSupporter()) return;                       // supporters don't trigger or receive this
       var id='voteopen-'+o.getTime();
       if((list||[]).some(function(a){return a&&a.id===id;})) return;   // already announced
