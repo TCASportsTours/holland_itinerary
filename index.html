@@ -502,7 +502,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ag · tourinfo-faq-hotel-tidy</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ah · officials-tile-order</div>
     </section>
 
     <!-- TODAY -->
@@ -1472,12 +1472,13 @@
     var mine=officialOwns(e);
     var sub=esc(e.time)+((e.meta&&e.meta.format)?(' \u00b7 '+esc(e.meta.format)):(e.sub?(' \u00b7 '+esc(e.sub)):''));
     var teams=(e.teams&&e.teams.length)?e.teams:[e.teamA,e.teamB];
+    var anyOrder=teams.filter(Boolean).some(function(t){ var lu=(LINEUPS||{})[lineupKeyFor(t,e)]; return !!(lu&&lu.order&&lu.order.length); });
     var squad=teams.filter(Boolean).map(function(t){
-      return '<div class="eyebrow" style="margin:8px 2px 4px;color:#9a9ad6"><i class="ti ti-users"></i> '+esc(t)+'</div>'+officialSquadHTML(t);
+      return '<div class="eyebrow" style="margin:8px 2px 4px;color:#9a9ad6"><i class="ti ti-users"></i> '+esc(t)+'</div>'+officialTeamLineupHTML(t,e);
     }).join('');
     return '<div style="margin-bottom:8px">'+
       '<button class="squadopt" style="margin:0" onclick="openOfficialMatch('+e._i+')"><span class="dot" style="background:'+(mine?'rgba(119,119,201,.2)':'rgba(255,124,26,.16)')+';color:'+(mine?'#9a9ad6':'#ff9d52')+'"><i class="ti ti-ball-baseball"></i></span><span style="flex:1"><b>'+esc(e.title)+'</b><span>'+sub+'</span></span><i class="ti ti-chevron-right arr"></i></button>'+
-      '<button class="rollbtn" style="width:100%;justify-content:center;margin-top:6px" onclick="toggleSquadBox(this)"><i class="ti ti-users"></i> See full squad &amp; numbers</button>'+
+      '<button class="rollbtn" style="width:100%;justify-content:center;margin-top:6px" onclick="toggleSquadBox(this)"><i class="ti '+(anyOrder?'ti-list-numbers':'ti-users')+'"></i> '+(anyOrder?'See batting order &amp; squad':'See full squad &amp; numbers')+'</button>'+
       '<div style="display:none;margin-top:6px">'+squad+'</div>'+
     '</div>';
   }
@@ -1508,6 +1509,21 @@
     var names=((PLAYERS||{})[team]||[]).filter(function(n){return n&&n.trim();});
     if(!names.length) return '<div class="readonly" style="justify-content:flex-start"><i class="ti ti-info-circle"></i> No squad list for '+esc(team||'this team')+'.</div>';
     return '<div class="travelbox" style="padding:6px 8px">'+names.map(function(n){return '<div class="lurow"><span class="luname">'+pNumBadge(n,team)+esc(n)+roleTagHTML(roleFor(n,team))+'</span></div>';}).join('')+'</div>';
+  }
+  function officialTeamLineupHTML(team,e){
+    var lu=(LINEUPS||{})[lineupKeyFor(team,e)];
+    var squad=((PLAYERS||{})[team]||[]).filter(function(n){return n&&String(n).trim();});
+    if(lu&&lu.order&&lu.order.length){
+      var h=lineupOrderHTML(team,lu.order);
+      var seen={}; lu.order.forEach(function(n){seen[String(n).trim()]=1;});
+      var rest=squad.filter(function(n){return !seen[String(n).trim()];});
+      if(rest.length){
+        h+='<div class="eyebrow" style="margin:8px 2px 4px"><i class="ti ti-users"></i> Rest of squad</div>'+
+           '<div class="travelbox" style="padding:6px 8px">'+rest.map(function(n){return '<div class="lurow"><span class="luname">'+pNumBadge(n,team)+esc(n)+roleTagHTML(roleFor(n,team))+'</span></div>';}).join('')+'</div>';
+      }
+      return h;
+    }
+    return officialSquadHTML(team);
   }
   function openOfficialMatch(i){
     var e=EVENTS[i]; if(!e) return;
