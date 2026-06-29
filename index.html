@@ -495,7 +495,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ad · packlink-countdown-admin-tidy</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ae · rules-tab-roles-roombox</div>
     </section>
 
     <!-- TODAY -->
@@ -556,7 +556,6 @@
         <div class="tile acc-purple" onclick="openHandover()"><span class="tbadge"><i class="ti ti-heart-handshake"></i></span><div>Handover of Care</div></div>
         <div class="tile acc-orange" onclick="openHowTo()"><span class="tbadge"><i class="ti ti-help-circle"></i></span><div>How to use</div></div>
         <div class="tile acc-teal" onclick="openFAQ()"><span class="tbadge"><i class="ti ti-messages"></i></span><div>FAQ</div></div>
-        <div class="tile acc-purple" id="rulesTile" style="display:none" onclick="openRules()"><span class="tbadge"><i class="ti ti-gavel"></i></span><div>Tournament rules</div></div>
         <div class="tile acc-teal" id="hotelTile" style="display:none" onclick="openHotelMap()"><span class="tbadge"><i class="ti ti-building"></i></span><div>Hotel &middot; Map</div></div>
         <div class="tile acc-orange" id="squadTile" style="display:none" onclick="openRoster()"><span class="tbadge"><i class="ti ti-clipboard-list"></i></span><div>Squad list</div></div>
         <div class="tile acc-purple" id="voteTile" style="display:none" onclick="openVoteResults()"><span class="tbadge"><i class="ti ti-trophy"></i></span><div>Players&rsquo; Player<span id="voteTileSub" style="display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px"></span></div></div>
@@ -566,6 +565,11 @@
 
       <div id="moreDynamic"></div>
       <div style="height:8px"></div>
+    </section>
+
+    <!-- RULES -->
+    <section class="screen" id="s-rules">
+      <div id="rulesBody"></div>
     </section>
 
     <!-- DETAIL -->
@@ -605,7 +609,7 @@
 
   <nav class="tabbar">
     <button class="tab active" data-tab="today" onclick="go('today')"><i class="ti ti-calendar-event"></i><span>Today</span></button>
-    <button class="tab" data-tab="updates" onclick="go('updates')"><i class="ti ti-bell"></i><span>Alerts</span></button>
+    <button class="tab" data-tab="rules" onclick="go('rules')"><i class="ti ti-gavel"></i><span>Rules</span></button>
     <button class="tab" data-tab="cricket" onclick="go('cricket')"><i class="ti ti-trophy"></i><span>Cricket</span></button>
     <button class="tab" data-tab="more" onclick="go('more')"><i class="ti ti-layout-grid"></i><span>More</span></button>
   </nav>
@@ -728,7 +732,7 @@
     passport:'ti-id',id:'ti-id',health:'ti-pill',medical:'ti-pill',sun:'ti-sun',shield:'ti-shield',star:'ti-star',clock:'ti-clock',
     map:'ti-map-pin',behaviour:'ti-mood-smile',behavior:'ti-mood-smile',free:'ti-walk',time:'ti-clock'};
 
-  var titles={updates:['Alerts','Messages from tour staff'],cricket:['Cricket','Powered by CricHeroes'],more:['Tour hub','Everything else']};
+  var titles={updates:['Alerts','Messages from tour staff'],cricket:['Cricket','Powered by CricHeroes'],more:['Tour hub','Everything else'],rules:['Tournament rules','GCS playing conditions']};
   var lastTab='today', currentSquad='Northern Knights', currentPlayer='', isStaff=false, staffPending=false, role='player', pendingRole='player';
   var _alertsBack='today', isAdmin=false, _adminPending=false;
   function isSupporter(){ return role==='supporter'; }
@@ -858,7 +862,7 @@
       '<div id="cdDays" style="font-size:66px;font-weight:800;font-style:italic;color:var(--orange);line-height:1.02;margin:10px 0 0">'+live.daysUntil+'</div>'+
       '<div style="font-size:14px;color:#fff;font-weight:600">days to go</div>'+
       '<div id="cdHMS" style="font-size:15px;color:var(--muted);margin-top:8px;font-variant-numeric:tabular-nums">&nbsp;</div>'+
-      (startLabel?'<div style="font-size:13px;color:var(--faint);margin-top:12px"><i class="ti ti-calendar-event"></i> Kick-off: '+esc(startLabel)+'</div>':'')+
+      (startLabel?'<div style="font-size:13px;color:var(--faint);margin-top:12px"><i class="ti ti-calendar-event"></i> Play begins: '+esc(startLabel)+'</div>':'')+
       '</div>';
     h+='<div class="eyebrow">Full schedule</div>';
     var any=false;
@@ -922,7 +926,7 @@
       '<div id="cdDays" style="font-size:66px;font-weight:800;font-style:italic;color:var(--orange);line-height:1.02;margin:10px 0 0">'+nl.daysUntil+'</div>'+
       '<div style="font-size:14px;color:#fff;font-weight:600">days to go</div>'+
       '<div id="cdHMS" style="font-size:15px;color:var(--muted);margin-top:8px;font-variant-numeric:tabular-nums">&nbsp;</div>'+
-      '<div style="font-size:13px;color:var(--faint);margin-top:12px"><i class="ti ti-calendar-event"></i> Kick-off: '+fmtDateLabel(nl.start)+'</div>'+
+      '<div style="font-size:13px;color:var(--faint);margin-top:12px"><i class="ti ti-calendar-event"></i> Play begins: '+fmtDateLabel(nl.start)+'</div>'+
       '</div>';
     h+='<div class="readonly" style="justify-content:flex-start"><i class="ti ti-calendar-plus"></i> Your day-by-day schedule will appear here as soon as the tour staff upload it.</div>';
     document.getElementById('todayList').innerHTML=h;
@@ -935,7 +939,7 @@
     var title,sub,icon,col;
     if(before){ icon='ti-calendar-clock'; col='var(--teal)';
       title = dl===0 ? 'The tour starts today' : 'Tour starts in '+dl+' day'+(dl>1?'s':'');
-      sub = startLabel ? 'Kick-off: '+esc(startLabel)+' \u00b7 here\u2019s the full schedule' : 'Here\u2019s the full schedule';
+      sub = startLabel ? 'Play begins: '+esc(startLabel)+' \u00b7 here\u2019s the full schedule' : 'Here\u2019s the full schedule';
     } else { icon='ti-flag-check'; col='var(--purple)';
       title='Tour complete'; sub='Hope you had a great trip! The full schedule is below for reference.'; }
     var h='<div style="display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--surface-line);border-radius:16px;padding:14px 16px;margin:6px 2px 4px">'+
@@ -1152,8 +1156,9 @@
   function setTab(name){document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active',t.dataset.tab===name);});}
   function go(name){
     if(name==='updates' && lastTab!=='updates') _alertsBack=lastTab||'today';
-    if(['today','updates','cricket','more'].indexOf(name)>-1){lastTab=name;setTab(name);}else{setTab('');}
+    if(['today','updates','cricket','more','rules'].indexOf(name)>-1){lastTab=name;setTab(name);}else{setTab('');}
     if(name==='updates') renderAlertsFeed();
+    if(name==='rules') renderRules();
     showOnly('s-'+name);
     if(name==='today'){document.getElementById('appTitle').textContent=SETTINGS.tourName||'Tour';
       document.getElementById('appSub').textContent=currentSquad+' · '+(SETTINGS.weatherLabel||'')+' · Day '+DEMO_TODAY+' of '+TOTAL_DAYS;}
@@ -1239,7 +1244,10 @@
     var opp=oppName(e), when=(e&&e.title)?e.title:(team+(opp?(' v '+opp):''));
     var sub=[when,[(e&&DAYS[e.day])||'',(e&&e.time)||''].filter(Boolean).join(', ')].filter(Boolean).join(' \u00b7 ');
     var rows=(order||[]).map(function(n,i){ var num=pNum(n,team), ab=roleAbbr(roleFor(n,team)); return (i+1)+'. '+(num?'('+num+') ':'')+n+(ab?' ('+ab+')':''); }).join('\n');
-    return team+' \u2014 Batting order\n'+sub+'\n\n'+rows+'\n\nSent from the GCS Tour app';
+    var seen={}; (order||[]).forEach(function(n){seen[String(n).trim()]=1;});
+    var squad=((PLAYERS||{})[team]||[]).filter(function(n){return n&&String(n).trim() && !seen[String(n).trim()];});
+    var restTxt = squad.length ? ('\n\nRest of squad:\n'+squad.map(function(n){ var num=pNum(n,team), ab=roleAbbr(roleFor(n,team)); return (num?'('+num+') ':'')+n+(ab?' ('+ab+')':''); }).join('\n')) : '';
+    return team+' \u2014 Batting order\n'+sub+'\n\n'+rows+restTxt+'\n\nSent from the GCS Tour app';
   }
   function shareLineupToScorer(i){
     var e=EVENTS[i]; if(!e) return; var lu=LINEUPS[lineupKey(e)]; if(!lu||!lu.order||!lu.order.length){ toast('No batting order to send'); return; }
@@ -1484,7 +1492,7 @@
   function officialSquadHTML(team){
     var names=((PLAYERS||{})[team]||[]).filter(function(n){return n&&n.trim();});
     if(!names.length) return '<div class="readonly" style="justify-content:flex-start"><i class="ti ti-info-circle"></i> No squad list for '+esc(team||'this team')+'.</div>';
-    return '<div class="travelbox" style="padding:6px 8px">'+names.map(function(n){return '<div class="lurow"><span class="luname">'+pNumBadge(n,team)+esc(n)+'</span></div>';}).join('')+'</div>';
+    return '<div class="travelbox" style="padding:6px 8px">'+names.map(function(n){return '<div class="lurow"><span class="luname">'+pNumBadge(n,team)+esc(n)+roleTagHTML(roleFor(n,team))+'</span></div>';}).join('')+'</div>';
   }
   function openOfficialMatch(i){
     var e=EVENTS[i]; if(!e) return;
@@ -1521,12 +1529,12 @@
       var squad=((PLAYERS||{})[t]||[]).filter(function(n){return n&&String(n).trim();});
       h+='<div class="eyebrow" style="margin-top:18px;color:#7bdcc0"><i class="ti ti-list-numbers"></i> '+esc(t)+' batting order</div>';
       if(lu&&lu.order&&lu.order.length){
-        h+='<div class="travelbox" style="padding:6px 8px">'+lu.order.map(function(n,idx){return '<div class="lurow"><span class="lunum">'+(idx+1)+'</span><span class="luname">'+pNumBadge(n,t)+esc(n)+'</span></div>';}).join('')+'</div>';
+        h+=lineupOrderHTML(t, lu.order);
         var seen={}; lu.order.forEach(function(n){seen[String(n).trim()]=1;});
         var rest=squad.filter(function(n){return !seen[String(n).trim()];});
         if(rest.length){
           h+='<div class="eyebrow" style="margin-top:10px"><i class="ti ti-users"></i> Rest of squad</div>'+
-             '<div class="travelbox" style="padding:6px 8px">'+rest.map(function(n){return '<div class="lurow"><span class="luname">'+pNumBadge(n,t)+esc(n)+'</span></div>';}).join('')+'</div>';
+             '<div class="travelbox" style="padding:6px 8px">'+rest.map(function(n){return '<div class="lurow"><span class="luname">'+pNumBadge(n,t)+esc(n)+roleTagHTML(roleFor(n,t))+'</span></div>';}).join('')+'</div>';
         }
       } else {
         h+='<div class="readonly" style="justify-content:flex-start;margin-top:4px"><i class="ti ti-clock"></i> Batting order coming soon.</div>'+
@@ -1891,9 +1899,7 @@
       var med=hasVal(p.medical), diet=hasVal(p.dietary);
       h+='<div class="pcard"><div class="ptop"><span class="pname">'+pNumBadge(p.name,_rosterTeam)+esc(p.name||'')+'</span>'+
         (p.role?'<span class="prole">'+esc(p.role)+'</span>':'')+call+'</div>'+
-        '<div class="pdet">'+
-          '<div class="d"><div class="k">Room</div><div class="v">'+esc(p.room||'\u2014')+'</div></div>'+
-        '</div>'+
+        (hasVal(p.room) ? '<div class="pdet"><div class="d"><div class="k">Room</div><div class="v">'+esc(p.room)+'</div></div></div>' : '')+
         (function(){ var b='';
           if(med) b+='<button class="pbtn med" onclick="showRosterInfo('+idx+',\'medical\')"><i class="ti ti-pill"></i> Medical<span class="pdotred"></span><i class="ti ti-chevron-right pbarr"></i></button>';
           if(diet) b+='<button class="pbtn diet" onclick="showRosterInfo('+idx+',\'dietary\')"><i class="ti ti-salad"></i> Dietary<span class="pdotred"></span><i class="ti ti-chevron-right pbarr"></i></button>';
@@ -2705,15 +2711,114 @@
     });
     document.getElementById('detailBody').innerHTML=h;
   }
-  function openRules(){
-    showOnly('s-detail'); document.getElementById('appTitle').textContent='Tournament rules'; document.getElementById('appSub').textContent='Playing conditions & format';
-    var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti ti-gavel"></i> Tournament rules</div>'+
-      '<div style="font-size:14px;line-height:1.65;color:var(--muted);padding:4px 2px 12px">The playing conditions, match formats and competition rules for this tour.</div>'+
-      (hasVal(SETTINGS.rulesUrl)
-        ? '<a class="cta" href="'+attr(normUrl(SETTINGS.rulesUrl))+'" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center;box-sizing:border-box"><i class="ti ti-external-link"></i> Open the tournament rules</a>'
-        : '<div class="readonly" style="justify-content:flex-start"><i class="ti ti-headset"></i> Contact TCA Sports Tours if you need this.</div>')+
+  function openRules(){ go('rules'); }
+  var RULES=[
+    {n:'1',t:'Application of the Laws',blocks:[
+      'All matches are played under the MCC Laws of Cricket, except where varied by these Playing Conditions.']},
+    {n:'2',t:'Spirit of Cricket & Code of Conduct',blocks:[
+      'All players, coaches, managers and officials must uphold the MCC Spirit of Cricket at all times. Team managers are responsible for ensuring play stays within both the Spirit of Cricket and the Laws.',
+      'If a player fails to follow an umpire\u2019s instructions, shows dissent, criticises a decision by word or action, or behaves in a way likely to bring the game into disrepute, the umpire will report the matter to the player\u2019s team manager and GCS Tournament Management.']},
+    {n:'3',t:'Fair & Unfair Play',blocks:[
+      'The umpires are the sole judges of fair and unfair play and may intervene at any time \u2014 including for:',
+      ['list',['Time wasting','Damaging the pitch','Dangerous or unfair bowling','Ball tampering','Any other action considered unfair']]]},
+    {n:'4',t:'Scorers',blocks:[
+      'Each team must provide a scoring representative for every match. The scorer should stay close to the official GCS scorer or umpire to help with player identification and scoring queries.',
+      'Any dispute about scoring or the interpretation of playing conditions during a match must be raised immediately with the scorer or umpire.']},
+    {n:'5',t:'Disputes',blocks:[
+      'Any dispute about the application or interpretation of these Playing Conditions is referred to GCS Tournament Management, whose decision is final and binding.']},
+    {n:'6',t:'Age Group Eligibility',blocks:[
+      'GCS tournaments are for boys\u2019, girls\u2019 and mixed teams. Age is taken on the first day of the tournament.',
+      ['sub','13 & Under'],['list',['Players must be 13 or under.','Up to four players aged 14 and under may be approved, provided they don\u2019t represent county, state, regional or equivalent teams.']],
+      ['sub','15 & Under'],['list',['Players must be 15 or under.','Up to four players aged 16 and under may be approved (same representative condition).']],
+      ['sub','16 & Under'],['list',['Players must be 16 or under.','Up to four players aged 17 and under may be approved (same representative condition).']],
+      ['sub','19 & Under'],['list',['Players must be 19 or under.']],
+      ['sub','Girls\u2019 participation'],'Unless a tournament states otherwise, girls may play up to two years above the stated age group.',
+      'Representative cricket means county, state, regional, territorial or equivalent teams. All overage players must be approved in advance by GCS Tournament Management.']},
+    {n:'7',t:'Number of Players',blocks:[
+      'A match-day squad may be up to 14 players. No more than 11 may bat or field at any one time.',
+      'All players must be nominated to the scorer or umpire before the toss. There is no requirement to nominate a batting order.',
+      'Substitutions need umpire approval and are normally made at the end of an over, the fall of a wicket, or during an interval. GCS may permit player replacements where needed for the safe and fair running of the tournament.']},
+    {n:'8',t:'Player Welfare',blocks:[
+      ['sub','Helmets & faceguards'],
+      'All players aged 18 and under must wear a helmet when batting, keeping wicket standing up to the stumps, or fielding close to the batter where there\u2019s a risk of injury. Stem guards are strongly recommended. GCS strongly recommends helmets for players of all ages in these situations.',
+      ['sub','Junior fielding restrictions'],
+      'No player in the 15 & Under group or younger may field closer than 8 yards (7.3 m) from the batter on a middle-stump line, except behind the wicket on the off side, until the batter has played the ball. For 13 & Under and below, the minimum is 11 yards (10 m). These distances apply whether or not a helmet is worn. Any under-18 fielding within 8 yards (except behind square on the off side) must wear a helmet.',
+      ['sub','Fast bowling'],
+      'National fast-bowling workload guidelines are not a GCS regulation, but GCS strongly recommends coaches and managers follow their own country/governing-body guidance. Monitoring workloads is the responsibility of team management and coaches \u2014 not the umpires or GCS officials.']},
+    {n:'9',t:'Slow Over Rates',blocks:[
+      'A strict time limit keeps the tournament on schedule:',
+      ['list',['T20 \u2014 90 minutes','30 overs \u2014 2 hours','40 overs \u2014 2 hours 40 minutes','50 overs \u2014 3 hours 30 minutes']],
+      'Umpires may use discretion for injuries, lost balls or delays caused by the batting side. A 5-run penalty is awarded to the batting side for every full over remaining when the time expires.']},
+    {n:'10',t:'Time Wasting',blocks:[
+      'If a team deliberately wastes time, the umpire may issue a warning. Further offences may give a 5-run penalty to the opposition.']},
+    {n:'11',t:'Bowling Limits',blocks:[
+      'No bowler may bowl more than one-fifth of an innings\u2019 overs. If overs are reduced by interruptions, limits adjust accordingly. Where overs aren\u2019t divisible by five, the minimum number of bowlers needed may bowl one extra over.']},
+    {n:'12',t:'Declarations',blocks:[
+      'Declarations are not permitted unless a tournament\u2019s specific regulations say otherwise.']},
+    {n:'13',t:'Wides',blocks:[
+      'Umpires apply a strict, consistent interpretation of the Wide Law. Any delivery that doesn\u2019t give the batter a reasonable chance to score may be called Wide.']},
+    {n:'14',t:'No Balls',blocks:[
+      'Every No Ball is followed by a Free Hit.']},
+    {n:'15',t:'Fielding Restrictions',blocks:[
+      ['sub','T20'],
+      'In the first six overs (Powerplay), a maximum of two fielders outside the 30-yard circle. After the Powerplay, a maximum of five outside (four inside).',
+      ['sub','All other matches'],
+      'No Powerplay. A maximum of five fielders outside the circle throughout (four inside).',
+      'Where no 30-yard circle is marked, the restrictions still apply \u2014 compliance is at the umpires\u2019 discretion and teams play within the Spirit of Cricket.']},
+    {n:'16',t:'Running Out the Non-Striker',blocks:[
+      'GCS recognises MCC Law 38.3 (running out a non-striker who leaves early). In the interests of development and the Spirit of Cricket, the fielding side should first warn the batting team through the umpires. A warning applies to the whole batting side for the rest of that innings; after it, a non-striker may be dismissed under Law 38.3 with no further warning.']},
+    {n:'17',t:'Cricket Balls',blocks:[
+      'GCS provides two new balls per match \u2014 a new ball at the start of each innings. Only GCS-approved balls may be used unless GCS Tournament Management authorises otherwise.']},
+    {n:'18',t:'Wet Weather Regulations',blocks:[
+      'If play is interrupted after the start, overs are reduced at one over per three minutes lost.',
+      ['sub','Minimum innings'],
+      ['list',['T20 \u2014 5 overs per side','30 overs \u2014 5 overs per side','40 overs \u2014 10 overs per side','50 overs \u2014 10 overs per side']],
+      'Revised targets use the Duckworth-Lewis-Stern (DLS) method. If a match is abandoned after the side batting second has faced the minimum overs, the result is decided by DLS.']},
+    {n:'19',t:'Result',blocks:[
+      'Where both teams have had the chance to bat for the same agreed number of overs, the team with more runs wins.']},
+    {n:'20',t:'Tied Matches',blocks:[
+      'Group-stage matches level on scores are recorded as a tie. Knockout matches level on scores are decided by a Super Over.']},
+    {n:'21',t:'Super Over (knockout only)',blocks:[
+      'The side batting second in the match bats first in the Super Over. Only players nominated in the original match may take part. The innings ends after two wickets. Standard (non-Powerplay) fielding restrictions apply.',
+      ['sub','If still level'],
+      ['list',['Most boundaries in the Super Over','Then fewest wickets lost in the Super Over','If still tied, another Super Over is played']]]},
+    {n:'22',t:'Points',blocks:[
+      ['list',['Win \u2014 4 points','Tie \u2014 2 points','Abandoned match \u2014 2 points']]]},
+    {n:'24',t:'Failure to Fulfil a Fixture',blocks:[
+      'A team unable or unwilling to fulfil a scheduled fixture may be deemed to have forfeited. GCS Tournament Management then decides the result, any points and any effect on standings, and may impose further sanctions where appropriate.']},
+    {n:'25',t:'Competition Ranking',blocks:[
+      'Where teams finish level on points in a league or group, positions are decided by: 1) Net Run Rate (NRR); 2) Most wins.']},
+    {n:'26',t:'Abandoned Knockout Matches',blocks:[
+      'Where a knockout match can\u2019t be completed, every reasonable effort is made to get a result, including reducing overs. If none is possible, the team that finished higher in the qualifying stage progresses. For a Final with no result, the teams are Joint Winners unless GCS Tournament Management decides otherwise.']},
+    {n:'27',t:'Tournament Management',blocks:[
+      'GCS Tournament Management may amend schedules, venues, playing conditions or formats where necessary due to weather, ground availability, player welfare, safety or other exceptional circumstances. Any such decision is final.']}
+  ];
+  function ruleBlocks(blocks){
+    return (blocks||[]).map(function(b){
+      if(typeof b==='string') return '<p style="font-size:14px;line-height:1.62;color:var(--muted);margin:0 0 10px">'+esc(b)+'</p>';
+      if(b[0]==='sub') return '<div style="font-size:12px;letter-spacing:.04em;text-transform:uppercase;font-weight:700;color:#fff;margin:10px 0 6px">'+esc(b[1])+'</div>';
+      if(b[0]==='list') return '<ul style="margin:0 0 10px;padding-left:2px;list-style:none">'+b[1].map(function(it){return '<li style="display:flex;gap:8px;font-size:14px;line-height:1.55;color:var(--muted);margin:0 0 6px"><span style="color:var(--orange);flex:none">\u2022</span><span>'+esc(it)+'</span></li>';}).join('')+'</ul>';
+      return '';
+    }).join('');
+  }
+  function renderRules(){
+    var h='<div style="display:flex;gap:11px;align-items:flex-start;background:var(--surface);border:1px solid var(--surface-line);border-radius:14px;padding:13px 15px;margin:6px 2px 14px">'+
+      '<i class="ti ti-gavel" style="font-size:24px;color:var(--orange)"></i>'+
+      '<div style="flex:1;min-width:0"><b style="display:block;color:#fff;font-size:15px">GCS rules &amp; playing conditions</b>'+
+      '<span style="color:var(--muted);font-size:13px">All matches follow the MCC Laws of Cricket except where varied below.</span></div></div>';
+    if(hasVal(SETTINGS.rulesUrl)){
+      h+='<a class="cibig" href="'+attr(normUrl(SETTINGS.rulesUrl))+'" target="_blank" rel="noopener" style="text-decoration:none;margin:0 0 14px"><i class="ti ti-file-text"></i> Open the official PDF</a>';
+    }
+    RULES.forEach(function(s){
+      h+='<div style="background:var(--surface);border:1px solid var(--surface-line);border-radius:14px;padding:14px 15px;margin:0 2px 12px">'+
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
+          '<span style="flex:none;min-width:26px;height:26px;padding:0 6px;border-radius:8px;background:rgba(255,124,26,.16);color:var(--orange);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center">'+esc(s.n)+'</span>'+
+          '<span style="font-weight:700;font-style:italic;font-size:16px;color:#fff;line-height:1.2">'+esc(s.t)+'</span>'+
+        '</div>'+ruleBlocks(s.blocks)+
       '</div>';
-    document.getElementById('detailBody').innerHTML=h;
+    });
+    h+='<div class="readonly" style="margin-top:4px"><i class="ti ti-shield-check"></i> Issued by GCS Tournament Management</div>';
+    document.getElementById('rulesBody').innerHTML=h;
   }
   function flightAirline(num){
     num=String(num||'').trim().toUpperCase().replace(/\s+/g,'');
