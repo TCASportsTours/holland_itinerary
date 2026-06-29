@@ -495,7 +495,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ac · faq-flights-countdown-rules</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ad · packlink-countdown-admin-tidy</div>
     </section>
 
     <!-- TODAY -->
@@ -874,9 +874,9 @@
     if(lastTab==='today'){ var s=document.getElementById('appSub'); if(s) s.textContent=currentSquad+' \u00b7 '+live.daysUntil+' days to go'; }
     startBigCountdown(live);
   }
-  function startBigCountdown(live){
+  function startBigCountdown(live){ startBigCountdownTo(bigCountdownTarget(live)); }
+  function startBigCountdownTo(target){
     if(_bigCdTimer){ clearInterval(_bigCdTimer); _bigCdTimer=null; }
-    var target=bigCountdownTarget(live);
     function tick(){
       var dEl=document.getElementById('cdDays'), hEl=document.getElementById('cdHMS');
       if(!dEl||!hEl){ if(_bigCdTimer){clearInterval(_bigCdTimer);_bigCdTimer=null;} return; }
@@ -887,6 +887,48 @@
       hEl.textContent=('0'+hh).slice(-2)+'h '+('0'+mm).slice(-2)+'m '+('0'+ss).slice(-2)+'s';
     }
     tick(); _bigCdTimer=setInterval(tick,1000);
+  }
+  /* Parse the tour's start/end straight from SETTINGS.dates (e.g. "5th - 10th July 2026"),
+     so the countdown still works before any schedule has been uploaded. */
+  function parseTourRange(){
+    var ds=String(SETTINGS.dates||'').trim(); if(!ds) return null;
+    var year=tourYear();
+    var low=ds.toLowerCase().replace(/(\d+)(st|nd|rd|th)/g,'$1');
+    var months=low.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/g);
+    var days=low.match(/\b(\d{1,2})\b/g);
+    if(!months||!months.length||!days||!days.length) return null;
+    var sM=MONTHS[months[0]], sD=parseInt(days[0],10);
+    var eM=MONTHS[months[months.length-1]], eD=parseInt(days[days.length-1],10);
+    var start=new Date(year,sM,sD,0,0,0,0); if(isNaN(start.getTime())) return null;
+    var end=new Date(year,eM,eD,0,0,0,0); if(isNaN(end.getTime())||end<start) end=start;
+    return {start:start,end:end};
+  }
+  function noScheduleLive(){
+    var r=parseTourRange(); if(!r) return null;
+    var now=new Date(), todayMid=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    var phase = todayMid<r.start ? 'before' : (todayMid>r.end ? 'after' : 'during');
+    var daysUntil=Math.max(0,Math.round((r.start-todayMid)/86400000));
+    return {phase:phase, daysUntil:daysUntil, now:now, start:r.start};
+  }
+  function fmtDateLabel(d){
+    var wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+    var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+    return wd+' '+d.getDate()+' '+mo;
+  }
+  function renderBigCountdownNoSchedule(nl){
+    var target=eventTimeOn(nl.start,'09:00')||nl.start;
+    var h='<div style="background:var(--surface);border:1px solid var(--surface-line);border-radius:20px;padding:26px 18px;margin:8px 2px 16px;text-align:center">'+
+      '<div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700">Countdown to '+esc(SETTINGS.destination||SETTINGS.tourName||'the tour')+'</div>'+
+      '<div id="cdDays" style="font-size:66px;font-weight:800;font-style:italic;color:var(--orange);line-height:1.02;margin:10px 0 0">'+nl.daysUntil+'</div>'+
+      '<div style="font-size:14px;color:#fff;font-weight:600">days to go</div>'+
+      '<div id="cdHMS" style="font-size:15px;color:var(--muted);margin-top:8px;font-variant-numeric:tabular-nums">&nbsp;</div>'+
+      '<div style="font-size:13px;color:var(--faint);margin-top:12px"><i class="ti ti-calendar-event"></i> Kick-off: '+fmtDateLabel(nl.start)+'</div>'+
+      '</div>';
+    h+='<div class="readonly" style="justify-content:flex-start"><i class="ti ti-calendar-plus"></i> Your day-by-day schedule will appear here as soon as the tour staff upload it.</div>';
+    document.getElementById('todayList').innerHTML=h;
+    document.getElementById('progbar').style.width='0%';
+    if(lastTab==='today'){ var s=document.getElementById('appSub'); if(s) s.textContent=(SETTINGS.destination||currentSquad)+' \u00b7 '+nl.daysUntil+' days to go'; }
+    startBigCountdownTo(target);
   }
   function renderScheduleOutsideTour(live,list,staff){
     var before=live.phase==='before', dl=live.daysUntil, startLabel=DAYS[live.minDay]||'';
@@ -923,6 +965,12 @@
       return e.sq==='all'||e.sq===currentSquad; });
     var live=liveDayInfo();
     if(live){ DEMO_TODAY=live.day; }
+    // No schedule uploaded yet: keep the countdown as the main view until staff add events,
+    // regardless of any stale/placeholder day info. The tour dates come from Settings.
+    if(!(EVENTS && EVENTS.length)){
+      var nl=noScheduleLive();
+      if(nl && nl.phase!=='after'){ renderBigCountdownNoSchedule(nl); return; }
+    }
     // Before the tour starts (or after it ends) there is no "today" — show the full
     // schedule with a banner instead of pinning day 1 as today.
     if(live && live.phase==='before' && live.daysUntil>30){ renderBigCountdown(live,list,staff); return; }
@@ -1456,14 +1504,12 @@
     h+=mapLink('Ground', e.loc||m.ground, [m.ground,m.pitch].filter(Boolean).join(' \u00b7 '));
     h+=info('ti-shirt','Kit', e.kit);
     h+=info('ti-circle','Ball', m.ball);
-    var hasTiming = hasVal(m.arrival)||hasVal(m.start)||hasVal(m.lunch)||hasVal(m.finish)||hasVal(m.returnHotel);
+    var hasTiming = hasVal(m.arrival)||hasVal(m.start)||hasVal(m.lunch);
     if(hasTiming){
       h+='<div class="eyebrow" style="margin-top:16px;color:#9a9ad6"><i class="ti ti-clock-hour-4"></i> Ground timetable</div>';
       h+=info('ti-walk','Arrival at ground', m.arrival);
       h+=info('ti-player-play','Start of play', m.start);
       h+=info('ti-tools-kitchen-2','Lunch', m.lunch);
-      h+=info('ti-flag-checkered','Finish', m.finish);
-      h+=info('ti-bus','Return to hotel', m.returnHotel);
     }
     h+=officialsLine('umpire','Umpires',[m.umpire1,m.umpire2], m.umpires, 'umpire');
     h+=officialsLine('ti-pencil','Scorers',[m.scorer1,m.scorer2], m.scorers, 'scorer');
@@ -1542,6 +1588,11 @@
   }
   /* ===== More: data-driven info boxes from moreContent ===== */
   function moreIcon(ic){ if(!ic)return 'ti-info-circle'; ic=String(ic).trim().toLowerCase(); return ic.indexOf('ti-')===0?ic:(MOREICONS[ic]||'ti-info-circle'); }
+  function packLabel(it){
+    var s=esc(String(it));
+    s=s.replace(/(https?:\/\/[^\s<)]+)/g,'<a href="$1" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--teal);text-decoration:underline;word-break:break-all">$1</a>');
+    return s;
+  }
   function linkify(t){ var s=esc(String(t)); s=s.replace(/\n/g,'<br>'); s=s.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--teal)">$1</a>'); return s; }
   var TILE_ACCENTS=['acc-orange','acc-teal','acc-purple'];
   function renderMore(){
@@ -1739,7 +1790,7 @@
     c.items.forEach(function(it,ii){
       var id=packId(c.title,it), on=!!PACK[id];
       h+='<div class="checkitem'+(on?' on':'')+'" id="pk_'+id+'" onclick="togglePack(\''+id+'\')">'+
-         '<span class="box"><i class="ti ti-check"></i></span><span class="inum">'+(ii+1)+'</span><span class="lab">'+esc(it)+'</span></div>';
+         '<span class="box"><i class="ti ti-check"></i></span><span class="inum">'+(ii+1)+'</span><span class="lab">'+packLabel(it)+'</span></div>';
     });
     h+='</div>';
     h+='<button id="packDoneBtn" '+packDoneBtnAttrs(st)+'>'+packDoneBtnInner(st)+'</button>';
@@ -2884,9 +2935,9 @@
   function applyData(d){
     try{
       d=d||{};
-      if(Array.isArray(d.events)&&d.events.length) EVENTS=d.events;
+      if(Array.isArray(d.events)) EVENTS=d.events;   // events key present (even []) = real published data; absent = keep demo
       EVENTS.forEach(function(e,i){e._i=i;});
-      if(d.days&&typeof d.days==='object'&&!Array.isArray(d.days)&&Object.keys(d.days).length) DAYS=d.days;
+      if(d.days&&typeof d.days==='object'&&!Array.isArray(d.days)) DAYS=d.days;
       if(Array.isArray(d.teams)&&d.teams.length) TEAMS_LIST=d.teams;
       if(d.announcements) ANN=d.announcements;
       if(d.settings&&typeof d.settings==='object'&&!Array.isArray(d.settings)) SETTINGS=d.settings;
