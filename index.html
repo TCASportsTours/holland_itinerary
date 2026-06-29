@@ -296,6 +296,20 @@
   .rosterteam button{background:var(--surface);border:1px solid var(--surface-line);color:var(--muted);
     font-family:inherit;font-weight:600;font-size:12px;padding:6px 12px;border-radius:20px;cursor:pointer}
   .rosterteam button.on{background:rgba(255,124,26,.18);border-color:rgba(255,124,26,.5);color:#ffb074}
+  .hcard{background:var(--surface);border:1px solid var(--surface-line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+  .hcard>summary,.faqitem>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;padding:13px;outline:none}
+  .hcard>summary::-webkit-details-marker,.faqitem>summary::-webkit-details-marker{display:none}
+  .httl{flex:1;font-weight:600;font-size:14px}
+  .hchev{font-size:18px;color:var(--muted);transition:transform .2s;margin-left:auto}
+  details[open]>summary .hchev{transform:rotate(180deg)}
+  .hbody{padding:0 13px 6px}
+  .hstep{display:flex;gap:9px;padding:8px 0;border-top:1px solid rgba(255,255,255,.06);font-size:13px;color:var(--muted);line-height:1.55}
+  .hstep b{color:#fff;font-weight:600}
+  .hnum{font-weight:700;min-width:14px}
+  .faqitem{background:var(--surface);border:1px solid var(--surface-line);border-radius:10px;margin-bottom:7px;overflow:hidden}
+  .faqitem>summary{align-items:flex-start;padding:11px 12px}
+  .fq{flex:1;font-size:13px;font-weight:600;color:#fff}
+  .fa{padding:0 12px 12px;font-size:13px;color:var(--muted);line-height:1.6}
   .pcard{background:var(--surface);border:1px solid var(--surface-line);border-radius:14px;padding:12px 14px;margin:9px 0}
   .pcard .ptop{display:flex;align-items:center;gap:10px}
   .pcard .pname{font-weight:700;font-size:15.5px;color:#fff;flex:1;line-height:1.15}
@@ -481,7 +495,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24w · meal-team-tabs</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24x · help-faq-shop</div>
     </section>
 
     <!-- TODAY -->
@@ -540,6 +554,8 @@
         <div class="tile acc-red" onclick="openSOS()"><span class="tbadge"><i class="ti ti-phone-call"></i></span><div>Emergency contacts</div></div>
         <div class="tile acc-teal" onclick="openStaff()"><span class="tbadge"><i class="ti ti-user-star"></i></span><div>Staff &amp; coaches</div></div>
         <div class="tile acc-purple" onclick="openHandover()"><span class="tbadge"><i class="ti ti-heart-handshake"></i></span><div>Handover of Care</div></div>
+        <div class="tile acc-orange" onclick="openHelp()"><span class="tbadge"><i class="ti ti-help-circle"></i></span><div>How to use &amp; FAQ</div></div>
+        <div class="tile acc-purple" id="shopTile" style="display:none" onclick="openShop()"><span class="tbadge"><i class="ti ti-shopping-bag"></i></span><div>Shop &middot; kit &amp; merch</div></div>
         <div class="tile acc-teal" id="hotelTile" style="display:none" onclick="openHotelMap()"><span class="tbadge"><i class="ti ti-building"></i></span><div>Hotel &middot; Map</div></div>
         <div class="tile acc-orange" id="squadTile" style="display:none" onclick="openRoster()"><span class="tbadge"><i class="ti ti-clipboard-list"></i></span><div>Squad list</div></div>
         <div class="tile acc-purple" id="voteTile" style="display:none" onclick="openVoteResults()"><span class="tbadge"><i class="ti ti-trophy"></i></span><div>Players&rsquo; Player</div></div>
@@ -691,7 +707,8 @@
   var PLAYERS={}, NUMS={}, ROSTER={}, CHECKINS={}, CI_VIEW=[], _ciKey='', _ciEvent=null, _ciInit=false;
   var PACK={}, _packKey='', _rosterTeam='', _rosterList=[];
   var MEALS=[], VOTE_SQUADS=[], _ballot={}, _order={}, _orderName='', _mealIdx=-1, _mealTeam='', _mealOrdersData={};
-  var MORECONTENT=[], TEAMMETA={}, MOREGROUPS=[];
+  var MORECONTENT=[], TEAMMETA={}, MOREGROUPS=[], FAQ=[];
+  var DEFAULT_SHOP='https://www.shop.globalcricketseries.com';
   var EMERGENCY_NUMS={
     'England':{dial:'999',label:'999 (or 112) — police, fire, ambulance'},'Wales':{dial:'999',label:'999 (or 112)'},
     'Scotland':{dial:'999',label:'999 (or 112)'},'Ireland':{dial:'112',label:'112 or 999'},
@@ -1463,6 +1480,7 @@
   function linkify(t){ var s=esc(String(t)); s=s.replace(/\n/g,'<br>'); s=s.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--teal)">$1</a>'); return s; }
   var TILE_ACCENTS=['acc-orange','acc-teal','acc-purple'];
   function renderMore(){
+    refreshShopTile();
     var hostEl=document.getElementById('moreDynamic'); if(!hostEl)return;
     var groups=[], idx={};
     (MORECONTENT||[]).forEach(function(r){ var t=r.tile||'Info';
@@ -2456,7 +2474,11 @@
         : '<div class="readonly" style="justify-content:flex-start"><i class="ti ti-headset"></i> Contact TCA Sports Tours if you need this.</div>')+
       '</div>';
   }
-  function showBehaviour(){ var s=SETTINGS.behaviourShow; if(s===true) return true; if(s===false) return false; return hasVal(SETTINGS.behaviourUrl); }
+  function showBehaviour(){ if(SETTINGS.behaviourShow===false) return false; return hasVal(SETTINGS.behaviourUrl); }
+  function shopUrl(){ return normUrl(hasVal(SETTINGS.shopUrl)?SETTINGS.shopUrl:DEFAULT_SHOP); }
+  function showShop(){ return SETTINGS.shopShow!==false; }   // on by default; organiser can switch it off
+  function openShop(){ window.open(shopUrl(),'_blank','noopener'); }
+  function refreshShopTile(){ try{ var t=document.getElementById('shopTile'); if(t) t.style.display=showShop()?'':'none'; }catch(e){} }
   function openPaperwork(){
     showOnly('s-detail'); document.getElementById('appTitle').textContent='Paperwork'; document.getElementById('appSub').textContent='Before you travel';
     var country=SETTINGS.country||destWord();
@@ -2476,6 +2498,56 @@
     h+=paperCard({icon:'ti-plane-arrival', title:'Online landing cards',
       body:'Some countries ask every traveller to complete an online arrival / landing card in the days before departure. If <b>'+esc(country)+'</b> requires one, fill yours in once it\u2019s open.',
       url:SETTINGS.landingCardUrl, btn:'Complete your landing card'});
+    document.getElementById('detailBody').innerHTML=h;
+  }
+  function faqText(raw){
+    var s=esc(String(raw==null?'':raw));
+    var country=esc(SETTINGS.country||SETTINGS.destination||'the destination');
+    s=s.replace(/\{country\}/gi,country).replace(/\{destination\}/gi,esc(SETTINGS.destination||SETTINGS.country||''));
+    s=s.replace(/\{visa\}/gi,function(){
+      var label='official entry requirements for '+country;
+      return hasVal(SETTINGS.visaUrl)
+        ? '<a href="'+attr(normUrl(SETTINGS.visaUrl))+'" target="_blank" rel="noopener" style="color:var(--teal);font-weight:600">'+label+'</a>'
+        : label+' for your nationality (ask TCA Sports Tours if you need the link)';
+    });
+    return s;
+  }
+  function helpGuide(open,accent,icon,title,steps){
+    var h='<details class="hcard"'+(open?' open':'')+' style="border-color:'+accent+'66"><summary><span class="tbadge" style="background:'+accent+'28"><i class="ti '+icon+'" style="color:'+accent+'"></i></span><span class="httl">'+title+'</span><i class="ti ti-chevron-down hchev"></i></summary><div class="hbody">';
+    steps.forEach(function(st,i){ h+='<div class="hstep"><span class="hnum" style="color:'+accent+'">'+(i+1)+'</span><div><b>'+st[0]+'</b> '+st[1]+'</div></div>'; });
+    return h+'</div></details>';
+  }
+  function openHelp(){
+    showOnly('s-detail'); document.getElementById('appTitle').textContent='Help & how-to'; document.getElementById('appSub').textContent='Using the app & FAQ';
+    var h=helpGuide(true,'#ff9d52','ti-user','Using the app \u2014 players & supporters',[
+      ['Sign in.','Choose Player or Supporter, pick your squad and type your name. The app remembers you next time.'],
+      ['Today & Schedule.','Today shows what\u2019s on now; Schedule has the full day-by-day plan. Tap a match for the venue map and the line-up once it\u2019s posted.'],
+      ['Voting.','When voting\u2019s open it appears on the home screen \u2014 cast your votes before the cut-off.'],
+      ['Meals.','Pick your meals from the menus before each deadline so the kitchen can cater for everyone.'],
+      ['Live scores & streams.','Follow live scores, stats and streams on the Global Cricket Series platform.'],
+      ['Before you go.','Travel money, Mobile data, Paperwork and your Packing list all live under More.'],
+      ['Install it.','Use Add to home screen so it opens like a normal app.']
+    ]);
+    h+=helpGuide(false,'#7bdcc0','ti-whistle','Using the app \u2014 staff & coaches',[
+      ['Sign in as staff.','Enter the staff code and choose your squad. Everything players see, plus the tools below.'],
+      ['Squad list (confidential).','Each player\u2019s medical, dietary and room info, with a tap-to-call button for their parent/guardian. Tournament staff get team tabs to switch squads.'],
+      ['Line-ups.','Set the batting order for a match and share it straight to the scorer.'],
+      ['Meal pre-orders.','See who\u2019s ordered and who hasn\u2019t, per team (team tabs for tournament staff), so you can chase stragglers.'],
+      ['Officials & excursions.','Umpire and scorer contacts per fixture; any optional activities or car hire show here for staff and supporters.'],
+      ['Organisers.','The schedule, squads, alerts and settings are managed in the separate admin console.']
+    ]);
+    var faq=(FAQ||[]).filter(function(f){return f&&(f.q||f.question);});
+    if(faq.length){
+      h+='<div class="eyebrow" style="margin-top:18px"><i class="ti ti-messages"></i> Frequently asked questions</div>';
+      var cats=[], byCat={};
+      faq.forEach(function(f){ var c=(f.category||f.cat||'General').trim()||'General'; if(cats.indexOf(c)<0){cats.push(c);byCat[c]=[];} byCat[c].push(f); });
+      cats.forEach(function(c){
+        h+='<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:14px 2px 6px">'+esc(c)+'</div>';
+        byCat[c].forEach(function(f){
+          h+='<details class="faqitem"><summary><span class="fq">'+esc(f.q||f.question||'')+'</span><i class="ti ti-chevron-down hchev"></i></summary><div class="fa">'+faqText(f.a||f.answer||'')+'</div></details>';
+        });
+      });
+    }
     document.getElementById('detailBody').innerHTML=h;
   }
   function loadWeather(){
@@ -2671,7 +2743,8 @@
     MEALS=(d&&Array.isArray(d.meals)&&d.meals.length)?d.meals:PLACEHOLDER_MEALS;
     MORECONTENT=(d&&Array.isArray(d.moreContent))?d.moreContent:[];
     TEAMMETA=_obj(d&&d.teamMeta);
-    showRoleChooser(); renderAlertsFeed(); renderMore();
+    FAQ=(d&&Array.isArray(d.faq))?d.faq:[];
+    showRoleChooser(); renderAlertsFeed(); renderMore(); refreshShopTile();
     document.getElementById('appTitle').textContent=SETTINGS.tourName||'Tour';
     document.getElementById('appSub').textContent=SETTINGS.destination||'';
     var _tb=document.getElementById('tourBadge'); if(_tb&&SETTINGS.badge)_tb.src=SETTINGS.badge;
