@@ -495,7 +495,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24x · help-faq-shop</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24aa · meals-empty-livefix</div>
     </section>
 
     <!-- TODAY -->
@@ -555,7 +555,6 @@
         <div class="tile acc-teal" onclick="openStaff()"><span class="tbadge"><i class="ti ti-user-star"></i></span><div>Staff &amp; coaches</div></div>
         <div class="tile acc-purple" onclick="openHandover()"><span class="tbadge"><i class="ti ti-heart-handshake"></i></span><div>Handover of Care</div></div>
         <div class="tile acc-orange" onclick="openHelp()"><span class="tbadge"><i class="ti ti-help-circle"></i></span><div>How to use &amp; FAQ</div></div>
-        <div class="tile acc-purple" id="shopTile" style="display:none" onclick="openShop()"><span class="tbadge"><i class="ti ti-shopping-bag"></i></span><div>Shop &middot; kit &amp; merch</div></div>
         <div class="tile acc-teal" id="hotelTile" style="display:none" onclick="openHotelMap()"><span class="tbadge"><i class="ti ti-building"></i></span><div>Hotel &middot; Map</div></div>
         <div class="tile acc-orange" id="squadTile" style="display:none" onclick="openRoster()"><span class="tbadge"><i class="ti ti-clipboard-list"></i></span><div>Squad list</div></div>
         <div class="tile acc-purple" id="voteTile" style="display:none" onclick="openVoteResults()"><span class="tbadge"><i class="ti ti-trophy"></i></span><div>Players&rsquo; Player</div></div>
@@ -708,7 +707,7 @@
   var PACK={}, _packKey='', _rosterTeam='', _rosterList=[];
   var MEALS=[], VOTE_SQUADS=[], _ballot={}, _order={}, _orderName='', _mealIdx=-1, _mealTeam='', _mealOrdersData={};
   var MORECONTENT=[], TEAMMETA={}, MOREGROUPS=[], FAQ=[];
-  var DEFAULT_SHOP='https://www.shop.globalcricketseries.com';
+  var DEFAULT_SHOP='https://shop.globalcricketseries.com/';
   var EMERGENCY_NUMS={
     'England':{dial:'999',label:'999 (or 112) — police, fire, ambulance'},'Wales':{dial:'999',label:'999 (or 112)'},
     'Scotland':{dial:'999',label:'999 (or 112)'},'Ireland':{dial:'112',label:'112 or 999'},
@@ -1358,7 +1357,8 @@
     var ms=officialMatches();
     var head='<div class="travelbox" style="margin:6px 0 4px"><div class="th"><i class="ti ti-trophy"></i> Live scoring &amp; full results</div>'+
       '<div style="font-size:13px;line-height:1.5;color:var(--muted);padding:2px 2px 10px">Fixtures, live scores, team sheets and stats all run through GCS CricHeroes.</div>'+
-      '<button class="cta" style="width:100%;justify-content:center;box-sizing:border-box" onclick="openGCS()"><i class="ti ti-external-link"></i> Open GCS CricHeroes</button></div>';
+      '<button class="cta" style="width:100%;justify-content:center;box-sizing:border-box" onclick="openGCS()"><i class="ti ti-external-link"></i> Open GCS CricHeroes</button>'+
+      '<button class="cta" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:8px;background:rgba(119,119,201,.16);color:#9a9ad6;border:1px solid rgba(119,119,201,.4)" onclick="openScoring()"><i class="ti ti-list-numbers"></i> How to score \u2014 step by step</button></div>';
     if(officialName){ head+='<div class="readonly" style="justify-content:flex-start;margin:10px 0 2px">'+(officialKind==='umpire'?UMP_SVG:'<i class="ti ti-pencil"></i>')+' '+(officialKind==='umpire'?'Umpire':'Scorer')+' \u00b7 '+esc(officialName)+' <span style="margin-left:auto;color:#9a9ad6;font-weight:700;cursor:pointer" onclick="officialIdentityReset()">Change</span></div>'; }
     if(!ms.length){ host.innerHTML=head+'<div class="readonly" style="justify-content:flex-start;margin-top:12px"><i class="ti ti-info-circle"></i> No matches in the schedule yet.</div>'; return; }
     var h=head;
@@ -1456,7 +1456,7 @@
   function localEmergency(){ return EMERGENCY_NUMS[(SETTINGS&&SETTINGS.country)||''] || {dial:'112',label:'112 (or the local emergency number)'}; }
   function sosCall(num){ var t=String(num||'').replace(/[^0-9+]/g,''); if(t) window.location.href='tel:'+t; }
   function contactManager(){ contactStaff(SETTINGS.tourManager||'Tour manager', SETTINGS.tourManagerPhone||''); }
-  function contactReferee(){ contactStaff(SETTINGS.matchReferee||'Match referee', SETTINGS.matchRefereePhone||''); }
+  function contactReferee(){ contactStaff(SETTINGS.matchReferee||'Tournament Director', SETTINGS.matchRefereePhone||''); }
   function contactTech(){ contactStaff(SETTINGS.techPartner||'Technical support', SETTINGS.techPartnerPhone||''); }
   function sosCard(label,name,phone,icon,fn){
     if(!name) return '';
@@ -1470,7 +1470,7 @@
     var le=localEmergency(), loc=document.getElementById('sosLocal');
     if(loc) loc.innerHTML='<div class="contactrow" onclick="sosCall(\''+le.dial+'\')" style="cursor:pointer"><div class="ic" style="background:rgba(255,124,26,.16);color:#ff9d52"><i class="ti ti-ambulance"></i></div><div style="flex:1;min-width:0"><b>Local emergency'+(SETTINGS.country?' · '+esc(SETTINGS.country):'')+'</b><span>'+esc(le.label)+'</span></div><i class="ti ti-phone" style="color:#ff9d52;font-size:20px"></i></div>';
     var mgr=document.getElementById('sosManager'); if(mgr) mgr.innerHTML = isSupporter() ? tmContactHTML(true) : sosCard('Tour manager', SETTINGS.tourManager||'', SETTINGS.tourManagerPhone||'', 'ti-user-star','contactManager');
-    var ref=document.getElementById('sosReferee'); if(ref) ref.innerHTML=sosCard('Match referee', SETTINGS.matchReferee||'', SETTINGS.matchRefereePhone||'', 'ti-clipboard-check','contactReferee');
+    var ref=document.getElementById('sosReferee'); if(ref) ref.innerHTML=sosCard('Tournament Director', SETTINGS.matchReferee||'', SETTINGS.matchRefereePhone||'', 'ti-clipboard-check','contactReferee');
     var tch=document.getElementById('sosTech'); if(tch) tch.innerHTML=sosCard('Technical support', SETTINGS.techPartner||'', SETTINGS.techPartnerPhone||'', 'ti-tools','contactTech');
     var host=document.getElementById('sosStaff');
     if(host) host.innerHTML='<div class="eyebrow" style="margin-top:12px">Coaches &amp; staff</div>'+staffRowsHTML(staffFor('Staff'),true);
@@ -1480,7 +1480,6 @@
   function linkify(t){ var s=esc(String(t)); s=s.replace(/\n/g,'<br>'); s=s.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener" style="color:var(--teal)">$1</a>'); return s; }
   var TILE_ACCENTS=['acc-orange','acc-teal','acc-purple'];
   function renderMore(){
-    refreshShopTile();
     var hostEl=document.getElementById('moreDynamic'); if(!hostEl)return;
     var groups=[], idx={};
     (MORECONTENT||[]).forEach(function(r){ var t=r.tile||'Info';
@@ -1509,6 +1508,7 @@
     h+='<div class="tile acc-teal" onclick="openTravelMoney()"><span class="tbadge"><i class="ti ti-credit-card"></i></span><div>Travel money</div></div>';
     h+='<div class="tile acc-orange" onclick="openEsim()"><span class="tbadge"><i class="ti ti-device-mobile"></i></span><div>Mobile data</div></div>';
     h+='<div class="tile acc-teal" onclick="openPaperwork()"><span class="tbadge"><i class="ti ti-files"></i></span><div>Paperwork</div></div>';
+    if(showShop()) h+='<div class="tile acc-purple" onclick="openShop()"><span class="tbadge"><i class="ti ti-shopping-bag"></i></span><div>Shop &middot; kit &amp; merch</div></div>';
     h+='</div>';
     // 3) + 4) Pre-order menus and the Packing list. Before the tour starts the packing
     // list is the priority (menus below it); once the tour is under way, menus come first.
@@ -2158,7 +2158,7 @@
     var sup=isSupporter();
     var items=[];
     if(!sup) items.push({name:SETTINGS.tourManager, phone:SETTINGS.tourManagerPhone, role:'Tour manager', icon:'ti-user-star', fn:'contactManager'});
-    items.push({name:SETTINGS.matchReferee, phone:SETTINGS.matchRefereePhone, role:'Match referee', icon:'ti-clipboard-check', fn:'contactReferee'});
+    items.push({name:SETTINGS.matchReferee, phone:SETTINGS.matchRefereePhone, role:'Tournament Director', icon:'ti-clipboard-check', fn:'contactReferee'});
     items.push({name:SETTINGS.techPartner, phone:SETTINGS.techPartnerPhone, role:'Technical support', icon:'ti-tools', fn:'contactTech'});
     items=items.filter(function(x){return x.name;});
     var mgrCard = sup ? tmContactHTML(false) : '';
@@ -2477,8 +2477,14 @@
   function showBehaviour(){ if(SETTINGS.behaviourShow===false) return false; return hasVal(SETTINGS.behaviourUrl); }
   function shopUrl(){ return normUrl(hasVal(SETTINGS.shopUrl)?SETTINGS.shopUrl:DEFAULT_SHOP); }
   function showShop(){ return SETTINGS.shopShow!==false; }   // on by default; organiser can switch it off
-  function openShop(){ window.open(shopUrl(),'_blank','noopener'); }
-  function refreshShopTile(){ try{ var t=document.getElementById('shopTile'); if(t) t.style.display=showShop()?'':'none'; }catch(e){} }
+  function openShop(){
+    showOnly('s-detail'); document.getElementById('appTitle').textContent='Shop'; document.getElementById('appSub').textContent='Kit & merch';
+    var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti ti-shopping-bag"></i> Get kitted out</div>'+
+      '<div style="font-size:14px;line-height:1.65;color:var(--muted);padding:4px 2px 6px">Play like a pro, look like one too. The official Global Cricket Series shop has the team kit, training tops, caps and bits you actually want in your bag.</div>'+
+      '<div style="font-size:13px;line-height:1.6;color:var(--faint);padding:0 2px 12px">Top tip: leave it open on the family device and let the hints do the rest. \uD83D\uDC47</div>'+
+      '<a class="cta" href="'+attr(shopUrl())+'" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center;box-sizing:border-box"><i class="ti ti-external-link"></i> Open the GCS shop</a></div>';
+    document.getElementById('detailBody').innerHTML=h;
+  }
   function openPaperwork(){
     showOnly('s-detail'); document.getElementById('appTitle').textContent='Paperwork'; document.getElementById('appSub').textContent='Before you travel';
     var country=SETTINGS.country||destWord();
@@ -2519,23 +2525,27 @@
   }
   function openHelp(){
     showOnly('s-detail'); document.getElementById('appTitle').textContent='Help & how-to'; document.getElementById('appSub').textContent='Using the app & FAQ';
-    var h=helpGuide(true,'#ff9d52','ti-user','Using the app \u2014 players & supporters',[
-      ['Sign in.','Choose Player or Supporter, pick your squad and type your name. The app remembers you next time.'],
-      ['Today & Schedule.','Today shows what\u2019s on now; Schedule has the full day-by-day plan. Tap a match for the venue map and the line-up once it\u2019s posted.'],
-      ['Voting.','When voting\u2019s open it appears on the home screen \u2014 cast your votes before the cut-off.'],
-      ['Meals.','Pick your meals from the menus before each deadline so the kitchen can cater for everyone.'],
-      ['Live scores & streams.','Follow live scores, stats and streams on the Global Cricket Series platform.'],
-      ['Before you go.','Travel money, Mobile data, Paperwork and your Packing list all live under More.'],
-      ['Install it.','Use Add to home screen so it opens like a normal app.']
-    ]);
-    h+=helpGuide(false,'#7bdcc0','ti-whistle','Using the app \u2014 staff & coaches',[
-      ['Sign in as staff.','Enter the staff code and choose your squad. Everything players see, plus the tools below.'],
-      ['Squad list (confidential).','Each player\u2019s medical, dietary and room info, with a tap-to-call button for their parent/guardian. Tournament staff get team tabs to switch squads.'],
-      ['Line-ups.','Set the batting order for a match and share it straight to the scorer.'],
-      ['Meal pre-orders.','See who\u2019s ordered and who hasn\u2019t, per team (team tabs for tournament staff), so you can chase stragglers.'],
-      ['Officials & excursions.','Umpire and scorer contacts per fixture; any optional activities or car hire show here for staff and supporters.'],
-      ['Organisers.','The schedule, squads, alerts and settings are managed in the separate admin console.']
-    ]);
+    var h='';
+    if(isStaff){
+      h+=helpGuide(true,'#7bdcc0','ti-whistle','Using the app \u2014 staff & coaches',[
+        ['Squad list (confidential).','Each player\u2019s medical, dietary and room info, with a tap-to-call button for their parent/guardian. Tournament staff get team tabs to switch squads.'],
+        ['Line-ups.','Set the batting order for a match and share it straight to the scorer.'],
+        ['Meal pre-orders.','See who\u2019s ordered and who hasn\u2019t, per team (team tabs for tournament staff), so you can chase stragglers.'],
+        ['Send alerts.','Push an announcement to your whole squad, a single player, or just the other coaches \u2014 it pops up in their app and they have to acknowledge it.'],
+        ['Officials & excursions.','Umpire and scorer contacts per fixture; any optional activities or car hire show here for staff and supporters.'],
+        ['Organisers.','The schedule, squads, alerts and settings are managed in the separate admin console.']
+      ]);
+      h+='<details class="hcard" style="border-color:#9a9ad666"><summary><span class="tbadge" style="background:#9a9ad628"><i class="ti ti-clipboard-text" style="color:#9a9ad6"></i></span><span class="httl">Scoring the game \u2014 for scorers</span><i class="ti ti-chevron-down hchev"></i></summary><div class="hbody">'+scoringStepsHTML()+'</div></details>';
+    } else {
+      h+=helpGuide(true,'#ff9d52','ti-user','Using the app \u2014 players & supporters',[
+        ['Today & Schedule.','Today shows what\u2019s on now; Schedule has the full day-by-day plan. Tap a match for the venue map and the line-up once it\u2019s posted.'],
+        ['Voting.','When voting\u2019s open it appears on the home screen \u2014 cast your votes before the cut-off.'],
+        ['Meals.','Pick your meals from the menus before each deadline so the kitchen can cater for everyone.'],
+        ['Live scores & streams.','Follow live scores, stats and streams on the Global Cricket Series platform.'],
+        ['Before you go.','Travel money, Mobile data, Paperwork, the Shop and your Packing list all live under More.'],
+        ['Install it.','Use Add to home screen so it opens like a normal app.']
+      ]);
+    }
     var faq=(FAQ||[]).filter(function(f){return f&&(f.q||f.question);});
     if(faq.length){
       h+='<div class="eyebrow" style="margin-top:18px"><i class="ti ti-messages"></i> Frequently asked questions</div>';
@@ -2548,6 +2558,26 @@
         });
       });
     }
+    document.getElementById('detailBody').innerHTML=h;
+  }
+  function numSteps(steps,accent){
+    return steps.map(function(s,i){ return '<div class="hstep"><span class="hnum" style="color:'+accent+'">'+(i+1)+'</span><div>'+s+'</div></div>'; }).join('');
+  }
+  function scoringStepsHTML(){
+    var purple='#9a9ad6', amber='#ffb86b';
+    var main=['Open the Global Cricket Series app','Tap the tournament you\u2019re scoring','Go to Matches','Tap Upcoming','Find the match you\u2019re scoring','Tap the match','Tap Squad','Enter all playing members, then choose the captain and wicket-keeper','Do this for both teams','Tap Next','Begin scoring'];
+    var rain=['Tap Settings (top-right corner)','Find Set Match Break','Tap Rain','Tap Resume Scoring when play is about to restart','Tap Settings (top-right corner)','Tap Revise Target','Tap Apply in-built DLS method','Agree the overs lost with the umpire (1 over per 3 minutes)','If it\u2019s the 1st innings, halve the total overs lost','Enter the overs lost per innings','Tap OK','Continue scoring'];
+    var h=numSteps(main,purple);
+    h+='<div style="margin:12px 0 0;background:rgba(255,184,107,.08);border:1px solid rgba(255,184,107,.32);border-radius:10px;padding:11px 12px">'+
+       '<div style="display:flex;align-items:center;gap:7px;font-weight:700;font-size:13px;color:'+amber+';margin-bottom:2px"><i class="ti ti-cloud-rain"></i> In the case of rain</div>'+
+       numSteps(rain,amber)+'</div>';
+    return h;
+  }
+  function openScoring(){
+    showOnly('s-detail'); document.getElementById('appTitle').textContent='Scoring'; document.getElementById('appSub').textContent='GCS Scoring App';
+    var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti ti-clipboard-text"></i> Scoring on the GCS app</div>'+
+      '<div style="font-size:13px;line-height:1.6;color:var(--muted);padding:2px 2px 10px">Step-by-step for scorers using the Global Cricket Series scoring app, including what to do if rain interrupts play.</div></div>'+
+      '<div style="padding:4px 2px 0">'+scoringStepsHTML()+'</div>';
     document.getElementById('detailBody').innerHTML=h;
   }
   function loadWeather(){
@@ -2740,11 +2770,11 @@
     PLAYERS=_obj(d&&d.players);
     NUMS=_obj(d&&d.nums);
     ROSTER=_obj(d&&d.roster);
-    MEALS=(d&&Array.isArray(d.meals)&&d.meals.length)?d.meals:PLACEHOLDER_MEALS;
+    MEALS=(d&&Array.isArray(d.meals))?d.meals:PLACEHOLDER_MEALS;   // published [] means no meals; placeholder only when meals key is absent (pre-publish demo)
     MORECONTENT=(d&&Array.isArray(d.moreContent))?d.moreContent:[];
     TEAMMETA=_obj(d&&d.teamMeta);
     FAQ=(d&&Array.isArray(d.faq))?d.faq:[];
-    showRoleChooser(); renderAlertsFeed(); renderMore(); refreshShopTile();
+    showRoleChooser(); renderAlertsFeed(); renderMore();
     document.getElementById('appTitle').textContent=SETTINGS.tourName||'Tour';
     document.getElementById('appSub').textContent=SETTINGS.destination||'';
     var _tb=document.getElementById('tourBadge'); if(_tb&&SETTINGS.badge)_tb.src=SETTINGS.badge;
