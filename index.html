@@ -481,7 +481,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24u · schedule-venue-name</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24w · meal-team-tabs</div>
     </section>
 
     <!-- TODAY -->
@@ -690,7 +690,7 @@
   var STAFF={}, STAFF_VIEW=[], _contactPhone='';
   var PLAYERS={}, NUMS={}, ROSTER={}, CHECKINS={}, CI_VIEW=[], _ciKey='', _ciEvent=null, _ciInit=false;
   var PACK={}, _packKey='', _rosterTeam='', _rosterList=[];
-  var MEALS=[], VOTE_SQUADS=[], _ballot={}, _order={}, _orderName='', _mealIdx=-1;
+  var MEALS=[], VOTE_SQUADS=[], _ballot={}, _order={}, _orderName='', _mealIdx=-1, _mealTeam='', _mealOrdersData={};
   var MORECONTENT=[], TEAMMETA={}, MOREGROUPS=[];
   var EMERGENCY_NUMS={
     'England':{dial:'999',label:'999 (or 112) — police, fire, ambulance'},'Wales':{dial:'999',label:'999 (or 112)'},
@@ -1491,7 +1491,6 @@
     h+='<div class="tile acc-teal" onclick="openTravelMoney()"><span class="tbadge"><i class="ti ti-credit-card"></i></span><div>Travel money</div></div>';
     h+='<div class="tile acc-orange" onclick="openEsim()"><span class="tbadge"><i class="ti ti-device-mobile"></i></span><div>Mobile data</div></div>';
     h+='<div class="tile acc-teal" onclick="openPaperwork()"><span class="tbadge"><i class="ti ti-files"></i></span><div>Paperwork</div></div>';
-    if(SETTINGS.behaviourUrl) h+='<div class="tile acc-purple" onclick="openBehaviour()"><span class="tbadge"><i class="ti ti-writing-sign"></i></span><div>Behaviour contract</div></div>';
     h+='</div>';
     // 3) + 4) Pre-order menus and the Packing list. Before the tour starts the packing
     // list is the priority (menus below it); once the tour is under way, menus come first.
@@ -1756,7 +1755,6 @@
         (p.role?'<span class="prole">'+esc(p.role)+'</span>':'')+call+'</div>'+
         '<div class="pdet">'+
           '<div class="d"><div class="k">Room</div><div class="v">'+esc(p.room||'\u2014')+'</div></div>'+
-          '<div class="d"><div class="k">Parent / guardian</div><div class="v">'+esc(p.phone||'\u2014')+'</div></div>'+
         '</div>'+
         (function(){ var b='';
           if(med) b+='<button class="pbtn med" onclick="showRosterInfo('+idx+',\'medical\')"><i class="ti ti-pill"></i> Medical<span class="pdotred"></span><i class="ti ti-chevron-right pbarr"></i></button>';
@@ -1777,6 +1775,7 @@
   }
   function closeInfo(){ document.getElementById('infoModal').style.display='none'; }
   function pickRosterTeam(t){ _rosterTeam=t; renderRoster(); }
+  function pickMealTeam(t){ _mealTeam=t; renderMealOrders(_mealOrdersData); }
 
   /* ===== Shared helpers ===== */
   function attr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
@@ -2076,15 +2075,19 @@
   }
   function renderMealOrders(all){
     if(looksLikeTourBlob(all)||!all||typeof all!=='object'||Array.isArray(all)) all={};
-    var team=currentSquad;
+    _mealOrdersData=all;
+    var teams=(isAdmin?Object.keys(PLAYERS||{}):myStaffTeams()).filter(function(t){return t;});
+    if(teams.indexOf(_mealTeam)<0) _mealTeam=(teams.indexOf(currentSquad)>=0?currentSquad:(teams[0]||currentSquad));
+    var team=_mealTeam;
     var _seen={}; Object.keys(all).forEach(function(k){ var o=all[k]; if(!o||!o.orders||o.team!==team) return; _seen[((o.name||k)).toString().trim().toLowerCase()]=o; });
     var people=Object.keys(_seen).map(function(n){return _seen[n];});
     var roster=((PLAYERS||{})[team]||[]).filter(function(n){return n&&n.trim();})
       .concat(((STAFF||{})[team]||[]).map(function(p){return p&&p.name;}).filter(function(n){return n&&String(n).trim();}));
     var norm=function(s){return String(s||'').trim().toLowerCase();};
     function ordered(p,key){ var o=p.orders&&p.orders[key]; return !!(o && Object.keys(o).some(function(c){return o[c];})); }
-    var h='<div class="eyebrow" style="color:#ff9d52;margin-top:8px"><i class="ti ti-lock"></i> '+esc(team)+' \u00b7 staff only</div>'+
-      '<button class="cibtn" style="margin:4px 0 10px;max-width:200px" onclick="openMealOrders()"><i class="ti ti-refresh"></i> Refresh</button>';
+    var h='<div class="eyebrow" style="color:#ff9d52;margin-top:8px"><i class="ti ti-lock"></i> '+esc(team)+' \u00b7 staff only</div>';
+    if(teams.length>1){ h+='<div class="rosterteam">'+teams.map(function(t){return '<button class="'+(t===team?'on':'')+'" onclick="pickMealTeam(\''+t.replace(/'/g,"\\'")+'\')">'+esc(t)+'</button>';}).join('')+'</div>'; }
+    h+='<button class="cibtn" style="margin:4px 0 10px;max-width:200px" onclick="openMealOrders()"><i class="ti ti-refresh"></i> Refresh</button>';
     if(!MEALS||!MEALS.length){ h+='<div class="readonly" style="justify-content:flex-start;margin-top:10px"><i class="ti ti-info-circle"></i> No menus set up for this tour yet.</div>'; document.getElementById('detailBody').innerHTML=h; return; }
     (MEALS||[]).forEach(function(m){
       var key=mealKey(m), cs=mealCourses(m);
@@ -2448,18 +2451,25 @@
   function paperCard(o){
     return '<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti '+o.icon+'"></i> '+esc(o.title)+'</div>'+
       '<div style="font-size:14px;line-height:1.6;color:var(--muted);padding:2px 2px 12px">'+o.body+'</div>'+
-      (o.url
+      (hasVal(o.url)
         ? '<a class="cta" href="'+attr(normUrl(o.url))+'" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center;box-sizing:border-box"><i class="ti ti-external-link"></i> '+esc(o.btn||'Open')+'</a>'
-        : '<div class="readonly" style="justify-content:flex-start"><i class="ti ti-clock"></i> Link to be added by the tour organiser.</div>')+
+        : '<div class="readonly" style="justify-content:flex-start"><i class="ti ti-headset"></i> Contact TCA Sports Tours if you need this.</div>')+
       '</div>';
   }
+  function showBehaviour(){ var s=SETTINGS.behaviourShow; if(s===true) return true; if(s===false) return false; return hasVal(SETTINGS.behaviourUrl); }
   function openPaperwork(){
     showOnly('s-detail'); document.getElementById('appTitle').textContent='Paperwork'; document.getElementById('appSub').textContent='Before you travel';
     var country=SETTINGS.country||destWord();
-    var h='<div style="font-size:13px;color:var(--muted);margin:6px 2px 2px;line-height:1.55">Sort these well before you travel. Anything with a form links straight to it \u2014 download, complete and return as instructed.</div>';
+    var h='<div style="font-size:13px;color:var(--muted);margin:6px 2px 2px;line-height:1.55">Sort these well before you travel. Anything with a form links straight to it \u2014 download, complete and return as instructed. Where there\u2019s no link yet, contact TCA Sports Tours.</div>';
+    if(showBehaviour()) h+=paperCard({icon:'ti-writing-sign', title:'Behaviour contract',
+      body:'Every player confirms they\u2019ve read and agreed to the tour code of conduct, with a copy to a parent or guardian. Complete it before you travel.',
+      url:SETTINGS.behaviourUrl, btn:'Open the behaviour contract'});
     h+=paperCard({icon:'ti-file-certificate', title:'Consent to travel',
       body:'Required for any player <b>under 18 travelling without their own parent or guardian</b>. To complete it you\u2019ll need:<br>&bull; the signed consent-to-travel form<br>&bull; a copy of <b>both parents\u2019 / guardians\u2019 passports</b> with the signature page clearly visible<br>&bull; the player\u2019s <b>original birth certificate</b>',
       url:SETTINGS.consentUrl, btn:'Open the consent form'});
+    h+=paperCard({icon:'ti-clipboard-check', title:'Handover of care',
+      body:'Confirms your child is handed into the care of the tour staff for the duration of the tour. A parent or guardian completes this before departure.',
+      url:SETTINGS.handoverUrl, btn:'Complete the handover form'});
     h+=paperCard({icon:'ti-id-badge-2', title:'Visas',
       body:'Check the entry requirements for <b>'+esc(country)+'</b> and apply for any visa you need in good time. Requirements depend on your nationality, so check the official page for your passport.',
       url:SETTINGS.visaUrl, btn:'Check visa requirements'});
