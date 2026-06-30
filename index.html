@@ -505,7 +505,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24at · lineup-perms-clear-pulse</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ax · inapp-alert-photos</div>
     </section>
 
     <!-- TODAY -->
@@ -643,8 +643,11 @@
       <div class="alertIcon"><i class="ti ti-bell-ringing"></i></div>
       <div class="alertTeam" id="alertTeam"></div>
       <div class="alertMsg" id="alertMsg"></div>
+      <img id="alertPic" alt="Alert photo" style="width:100%;border-radius:12px;margin:0 0 10px;display:none;max-height:300px;object-fit:cover">
       <div class="alertTime" id="alertTime"></div>
       <button class="alertBtn" id="alertOpenBtn" style="display:none;background:rgba(119,119,201,.18);color:#9a9ad6;border:1px solid rgba(119,119,201,.5);margin-bottom:10px" onclick="openCurAlertTarget()"><i class="ti ti-list-numbers"></i> View batting order</button>
+      <button class="alertBtn" id="alertLinkBtn" style="display:none;background:rgba(119,119,201,.18);color:#9a9ad6;border:1px solid rgba(119,119,201,.5);margin-bottom:10px" onclick="openCurAlertLink()"><i class="ti ti-external-link"></i> Open link</button>
+      <button class="alertBtn" id="alertShareBtn" style="display:none;background:rgba(255,124,26,.18);color:#ff9d52;border:1px solid rgba(255,124,26,.5);margin-bottom:10px" onclick="shareCurAlert()"><i class="ti ti-share-2"></i> Share to my socials</button>
       <button class="alertBtn" onclick="ackAlert()">OK, got it</button>
     </div>
   </div>
@@ -1119,7 +1122,14 @@
       '<select id="alertAud" class="darksel" style="'+inSty+';margin-bottom:12px">'+opts+'</select>'+
       '<div class="eyebrow" style="margin:2px 0 6px">Message</div>'+
       '<textarea id="alertMsg2" rows="4" placeholder="e.g. Coach leaves at 8:30 sharp \u2014 be in reception by 8:20." style="'+inSty+';resize:vertical"></textarea>'+
-      '<button class="cta" onclick="sendStaffAlert()" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:12px"><i class="ti ti-send"></i> Send alert</button>'+
+      '<div class="eyebrow" style="margin:14px 0 6px">Photo (optional)</div>'+
+      '<input type="file" id="saPhotoFile" accept="image/*" style="display:none" onchange="pickStaffPhoto(this.files[0]); this.value=\'\';">'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" onclick="document.getElementById(\'saPhotoFile\').click()" style="background:var(--surface);border:1px solid var(--surface-line);color:#fff;font-family:inherit;font-size:13px;font-weight:600;padding:10px 14px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i class="ti ti-photo"></i> Add photo</button><span id="saPhotoName" style="font-size:12px;color:var(--muted)"></span></div>'+
+      '<div id="saPhotoPrev" style="display:none;margin-top:10px"><img id="saPhotoImg" alt="Preview" style="max-width:160px;border-radius:10px;display:block;border:1px solid var(--surface-line)"><button type="button" onclick="clearStaffPhoto()" style="margin-top:8px;background:none;border:0;color:#ff8a8a;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><i class="ti ti-x"></i> Remove photo</button></div>'+
+      '<div class="eyebrow" style="margin:14px 0 6px">Link (optional)</div>'+
+      '<input id="saLink" placeholder="e.g. your Instagram post link" style="'+inSty+'">'+
+      '<div style="display:flex;gap:7px;font-size:11px;color:var(--faint);margin:9px 2px 0;line-height:1.5"><i class="ti ti-info-circle" style="color:#9a9ad6;font-size:14px;flex:none;margin-top:1px"></i><span>A link adds a Share button so people can post your highlight to their own socials. Only send photos you\u2019re happy to share with everyone the alert reaches.</span></div>'+
+      '<button class="cta" onclick="sendStaffAlert()" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:14px"><i class="ti ti-send"></i> Send alert</button>'+
       '</div>';
     document.getElementById('detailBody').innerHTML=h;
     showOnly('s-detail');
@@ -1133,20 +1143,54 @@
     if(raw.indexOf('team::')===0) return {team:raw.substring(6)};
     return {team:raw};
   }
+  var _staffPhotoData=null;
+  function pickStaffPhoto(file){
+    if(!file) return;
+    if(!/^image\//.test(file.type)){ toast('That\u2019s not an image'); return; }
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      var img=new Image();
+      img.onload=function(){
+        var max=1280, w=img.width, h=img.height;
+        if(w>h && w>max){ h=Math.round(h*max/w); w=max; } else if(h>=w && h>max){ w=Math.round(w*max/h); h=max; }
+        var cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+        var data=cv.toDataURL('image/jpeg',0.72);
+        _staffPhotoData=data;
+        var im=document.getElementById('saPhotoImg'); if(im) im.src=data;
+        var pv=document.getElementById('saPhotoPrev'); if(pv) pv.style.display='block';
+        var nm=document.getElementById('saPhotoName'); if(nm) nm.textContent='~'+Math.round(data.length*0.73/1024)+' KB';
+      };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  function clearStaffPhoto(){ _staffPhotoData=null; var pv=document.getElementById('saPhotoPrev'); if(pv) pv.style.display='none'; var nm=document.getElementById('saPhotoName'); if(nm) nm.textContent=''; var im=document.getElementById('saPhotoImg'); if(im) im.removeAttribute('src'); }
   function sendStaffAlert(){
     if(!isStaff) return;
     var aud=parseAud((document.getElementById('alertAud')||{}).value||'');
     var text=((document.getElementById('alertMsg2')||{}).value||'').trim();
     if(!text){ toast('Type a message first'); return; }
+    var link=((document.getElementById('saLink')||{}).value||'').trim();
     var btn=document.querySelector('#s-detail .cta'); if(btn){ btn.style.opacity='.6'; btn.style.pointerEvents='none'; }
-    var a={id:'a'+Date.now(), team:aud.team, text:text, ts:Date.now()}; if(aud.player) a.player=aud.player;
-    getJSON('?type=alerts').then(function(r){return r.ok?r.json():[];}).then(function(list){
-      if(!Array.isArray(list))list=[]; list.unshift(a); list=list.slice(0,20);
-      return fetch('/.netlify/functions/tour?type=alerts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(list)}).then(function(r){return r.json();});
-    }).then(function(j){
-      if(j&&j.ok){ toast('Alert sent to '+alertAudLabel(a)); go('more'); }
-      else { toast('Send failed — try again'); if(btn){ btn.style.opacity=''; btn.style.pointerEvents=''; } }
-    }).catch(function(){ toast('Send failed — check your connection'); if(btn){ btn.style.opacity=''; btn.style.pointerEvents=''; } });
+    var reEnable=function(){ if(btn){ btn.style.opacity=''; btn.style.pointerEvents=''; } };
+    var a={id:'a'+Date.now(), team:aud.team, text:text, ts:Date.now()}; if(aud.player) a.player=aud.player; if(link) a.link=link;
+    var photo=_staffPhotoData;
+    var postAlert=function(){
+      getJSON('?type=alerts').then(function(r){return r.ok?r.json():[];}).then(function(list){
+        if(!Array.isArray(list))list=[]; list.unshift(a); list=list.slice(0,20);
+        return fetch('/.netlify/functions/tour?type=alerts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(list)}).then(function(r){return r.json();});
+      }).then(function(j){
+        if(j&&j.ok){ _staffPhotoData=null; toast('Alert sent to '+alertAudLabel(a)); go('more'); }
+        else { toast('Send failed — try again'); reEnable(); }
+      }).catch(function(){ toast('Send failed — check your connection'); reEnable(); });
+    };
+    if(photo){
+      var slot='photo_'+Date.now()+Math.random().toString(36).slice(2,7);
+      toast('Uploading photo\u2026');
+      fetch('/.netlify/functions/tour?type='+slot,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({img:photo, ts:Date.now()})})
+        .then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){ a.photo=slot; postAlert(); } else { toast('Photo upload failed'); reEnable(); } })
+        .catch(function(){ toast('Photo upload failed — check your connection'); reEnable(); });
+    } else { postAlert(); }
   }
   function beginStaffTeamPick(){
     staffPending=true; pendingRole='staff';
@@ -1293,11 +1337,32 @@
     if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){toast('Batting order copied \u2014 paste it anywhere');}).catch(function(){ window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank','noopener'); }); }
     else window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank','noopener');
   }
+  function eventOfficialNames(e){
+    var m=(e&&e.meta)||{};
+    return [m.umpire1,m.umpire2,m.scorer1,m.scorer2].map(function(s){return String(s||'').trim();}).filter(function(s){return s && hasVal(s);});
+  }
+  function notifyOfficials(i){
+    var e=EVENTS[i]; if(!e) return; var lu=LINEUPS[lineupKey(e)]; if(!lu||!lu.order||!lu.order.length){ toast('Set a batting order first'); return; }
+    var when=(e&&e.title)?e.title:'the next game', a={
+      id:'lo'+Date.now(), team:'officials', kind:'lineup', evKey:eventKey(e), squad:currentSquad,
+      offNames:eventOfficialNames(e), text:currentSquad+' batting order for '+when+' is ready \u2014 open the fixture to view.', ts:Date.now()
+    };
+    getJSON('?type=alerts').then(function(r){return r.ok?r.json():[];}).then(function(list){
+      if(!Array.isArray(list))list=[];
+      list=list.filter(function(x){return !(x&&x.team==='officials'&&x.kind==='lineup'&&x.evKey===a.evKey&&x.squad===a.squad);});
+      list.unshift(a); list=list.slice(0,20);
+      return fetch('/.netlify/functions/tour?type=alerts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(list)});
+    }).then(function(r){return r.json();}).then(function(j){
+      if(j&&j.ok){ ALERTS=ALERTS.filter(function(x){return !(x&&x.team==='officials'&&x.kind==='lineup'&&x.evKey===a.evKey&&x.squad===a.squad);}); ALERTS.unshift(a); toast('Umpires & scorers notified'); }
+      else toast('Couldn\u2019t notify \u2014 try again');
+    }).catch(function(){ toast('Couldn\u2019t notify \u2014 check your connection'); });
+  }
   function lineupShareSection(e){
-    var sc=scorerForEvent(e), h='<div class="eyebrow" style="margin-top:18px">Share batting order</div>';
-    if(sc&&sc.phone){ h+='<button class="cibig" style="margin-top:8px;background:#25d366;color:#0a3d23" onclick="shareLineupToScorer('+e._i+')"><i class="ti ti-brand-whatsapp"></i> Send to scorer on WhatsApp</button>'; }
+    var sc=scorerForEvent(e), h='<div class="eyebrow" style="margin-top:18px">Already sent to your squad &amp; match officials</div>';
+    h+='<button class="cibig" onclick="notifyOfficials('+e._i+')"><i class="ti ti-whistle"></i> Re-send to umpires &amp; scorers</button>';
+    if(sc&&sc.phone){ h+='<button class="cibig" style="background:#25d366;color:#0a3d23" onclick="shareLineupToScorer('+e._i+')"><i class="ti ti-brand-whatsapp"></i> Also send to scorer on WhatsApp</button>'; }
     h+='<button class="cibig cibig-reopen" onclick="copyLineupOrder('+e._i+')"><i class="ti ti-copy"></i> Copy batting order</button>';
-    if(sc&&!sc.phone){ h+='<div style="display:flex;gap:7px;align-items:flex-start;font-size:11px;color:var(--faint);margin-top:9px;line-height:1.45"><i class="ti ti-info-circle" style="color:#ff9d52;font-size:14px;margin-top:1px"></i><span>No number on file for '+esc(sc.name)+' \u2014 add the scorer\u2019s number in the spreadsheet for one-tap WhatsApp.</span></div>'; }
+    h+='<div style="display:flex;gap:7px;align-items:flex-start;font-size:11px;color:var(--faint);margin-top:9px;line-height:1.45"><i class="ti ti-info-circle" style="color:#9a9ad6;font-size:14px;margin-top:1px"></i><span>The order pops up in the app for the officials on this game \u2014 and for any umpire or scorer signed in without a name.'+((sc&&!sc.phone)?(' No number on file for '+esc(sc.name)+' for WhatsApp \u2014 add it in the spreadsheet if you want one-tap.'):'')+'</span></div>';
     return h;
   }
   function renderLineupSlot(e){
@@ -1369,7 +1434,7 @@
       h+='<div class="lupool">'+pool.map(function(n){return '<button class="luchip" onclick="lineupAdd('+JSON.stringify(n).replace(/"/g,'&quot;')+')">+ '+(pNum(n)?esc(pNum(n))+'  ':'')+esc(n)+'</button>';}).join('')+'</div>';
     }
     if(_lineup.length){
-      h+='<button class="cibig cibig-go" onclick="shareLineupSquad()" style="margin-top:16px"><i class="ti ti-device-mobile-share"></i> Share with '+esc(currentSquad)+'</button>';
+      h+='<button class="cibig cibig-go" onclick="shareLineupSquad()" style="margin-top:16px"><i class="ti ti-device-mobile-share"></i> Share with '+esc(currentSquad)+' &amp; match officials</button>';
       h+='<button class="cibig" onclick="shareLineupOut()"><i class="ti ti-brand-whatsapp"></i> Send to scorer / share\u2026</button>';
       h+='<button class="cibig" onclick="clearLineup()" style="color:var(--muted)"><i class="ti ti-trash"></i> Clear</button>';
     }
@@ -1388,14 +1453,20 @@
       .then(function(r){return r.json();}).then(function(j){
         if(!(j&&j.ok)){ toast('Couldn\u2019t share — try again'); return; }
         LINEUPS[_lineupKey]=obj;
-        // also alert this squad's players that the order is up
-        var opp=oppName(e); var when=(e&&e.title)?e.title:('the next game');
-        var a={id:'a'+Date.now(), team:currentSquad, kind:'lineup', evKey:eventKey(e), text:'Batting order for '+when+' is up \u2014 tap to view.', ts:Date.now()};
+        var when=(e&&e.title)?e.title:('the next game');
+        // alert this squad's players...
+        var aSquad={id:'a'+Date.now(), team:currentSquad, kind:'lineup', evKey:eventKey(e), text:'Batting order for '+when+' is up \u2014 tap to view.', ts:Date.now()};
+        // ...and the match officials (those on this fixture + any umpire/scorer signed in without a name)
+        var aOff={id:'lo'+Date.now(), team:'officials', kind:'lineup', evKey:eventKey(e), squad:currentSquad, offNames:eventOfficialNames(e), text:currentSquad+' batting order for '+when+' is ready \u2014 open the fixture to view.', ts:Date.now()};
         getJSON('?type=alerts').then(function(r){return r.ok?r.json():[];}).then(function(list){
-          if(!Array.isArray(list))list=[]; list.unshift(a); list=list.slice(0,20);
+          if(!Array.isArray(list))list=[];
+          list=list.filter(function(x){return !(x&&x.team==='officials'&&x.kind==='lineup'&&x.evKey===aOff.evKey&&x.squad===aOff.squad);});
+          list.unshift(aOff); list.unshift(aSquad); list=list.slice(0,20);
           return fetch('/.netlify/functions/tour?type=alerts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(list)});
-        }).then(function(){ toast('Shared with '+currentSquad+' \u2014 players alerted'); renderToday(); openEvent(e._i); })
-          .catch(function(){ toast('Order shared (alert may not have sent)'); openEvent(e._i); });
+        }).then(function(){
+          ALERTS=ALERTS.filter(function(x){return !(x&&x.team==='officials'&&x.kind==='lineup'&&x.evKey===aOff.evKey&&x.squad===aOff.squad);}); ALERTS.unshift(aOff);
+          toast('Shared with '+currentSquad+' & match officials'); renderToday(); openEvent(e._i);
+        }).catch(function(){ toast('Order shared (alert may not have sent)'); openEvent(e._i); });
       }).catch(function(){ toast('Couldn\u2019t share — check your connection'); });
   }
   function shareLineupOut(){
@@ -1493,6 +1564,7 @@
     (EVENTS||[]).forEach(function(e,i){e._i=i;});   // officials never call renderToday(), which is where _i is normally set
     var ph=document.querySelector('.phone'); ph.classList.remove('locked'); ph.classList.add('officials');
     fetchLineups(showOfficials);
+    startAlerts();
     saveSession();
   }
   function officialIdentityReset(){
@@ -3227,6 +3299,12 @@
   function alertRelevant(a){
     if(!a) return false;
     if(!alertFresh(a)) return false;                   // alerts disappear 6h after posting
+    if(isOfficial()){                                  // officials only ever get messages aimed at officials
+      if(a.team!=='officials') return false;
+      if(!officialName) return true;                   // signed in without a name: sees every officials message
+      return (a.offNames||[]).map(function(s){return String(s).toLowerCase();}).indexOf(String(officialName).toLowerCase())>=0;
+    }
+    if(a.team==='officials') return false;             // non-officials never see officials messages
     if(a.team==='supporters') return isSupporter();    // supporters only ever get an alert aimed at supporters
     if(isSupporter()) return false;                    // ...and nothing else
     if(a.team==='all') return true;                    // everyone else: all players + staff
@@ -3240,12 +3318,39 @@
     if(a.team==='all') return 'Everyone (players & staff)';
     if(a.team==='staff') return 'Coaches / managers';
     if(a.team==='supporters') return 'All supporters';
+    if(a.team==='officials') return 'Umpires & scorers';
     if(a.player) return a.team+' \u00b7 '+a.player;
     return a.team;
   }
   function openLineupFromAlert(evKey){
-    for(var i=0;i<EVENTS.length;i++){ if(eventKey(EVENTS[i])===evKey){ openLineupView(i); return; } }
-    go('today');
+    for(var i=0;i<EVENTS.length;i++){ if(eventKey(EVENTS[i])===evKey){ if(isOfficial()) openOfficialMatch(EVENTS[i]._i!=null?EVENTS[i]._i:i); else openLineupView(i); return; } }
+    if(!isOfficial()) go('today');
+  }
+  function findAlert(id){ return (ALERTS||[]).filter(function(a){return a&&a.id===id;})[0]; }
+  var _photoCache={};
+  function loadAlertPhoto(slot, imgId){
+    var set=function(src){ var el=document.getElementById(imgId); if(!el) return; if(src){ el.src=src; el.style.display='block'; } else { el.style.display='none'; } };
+    if(_photoCache[slot]!==undefined){ set(_photoCache[slot]); return; }
+    getJSON('?type='+encodeURIComponent(slot)).then(function(r){return r.ok?r.json():null;}).then(function(o){
+      var src=(o&&o.img)?o.img:''; _photoCache[slot]=src; set(src);
+    }).catch(function(){ set(''); });
+  }
+  function openAlertLink(id){ var a=findAlert(id); if(a&&a.link) window.open(normUrl(a.link),'_blank','noopener'); }
+  function shareAlert(id){
+    var a=findAlert(id); if(!a) return;
+    var txt=(a.text||'')+'\n\n'+socialTagLine(), url=a.link?normUrl(a.link):'';
+    if(navigator.share){ navigator.share(url?{text:txt,url:url}:{text:txt}).catch(function(){}); return; }
+    var full=txt+(url?('\n'+url):'');
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(full).then(function(){toast('Copied \u2014 paste it into your post');}).catch(function(){toast('Copied');}); }
+    else toast('Copy: '+full);
+  }
+  function alertShareBtns(a){
+    if(!a.link) return '';
+    var idArg=JSON.stringify(a.id).replace(/"/g,'&quot;');
+    return '<div style="display:flex;gap:8px;margin-top:10px">'+
+      '<button class="rollbtn" onclick="event.stopPropagation();openAlertLink('+idArg+')"><i class="ti ti-external-link"></i> Open</button>'+
+      '<button class="rollbtn" style="background:rgba(255,124,26,.16);color:#ff9d52;border-color:rgba(255,124,26,.4)" onclick="event.stopPropagation();shareAlert('+idArg+')"><i class="ti ti-share-2"></i> Share</button>'+
+    '</div>';
   }
   function renderAlertsFeed(){
     var host=document.getElementById('alertFeed'); if(!host) return;
@@ -3257,9 +3362,12 @@
       return '<div class="card"'+(tap?' onclick="openLineupFromAlert('+JSON.stringify(a.evKey).replace(/"/g,'&quot;')+')" style="cursor:pointer"':'')+'>'+
         '<div class="when">'+esc(alertAudLabel(a))+' \u00b7 '+esc(ago(a.ts))+'</div>'+
         '<p style="margin:2px 0 0">'+esc(a.text||'')+'</p>'+
+        (a.photo?'<img id="apicf-'+esc(a.photo)+'" alt="Alert photo" style="width:100%;border-radius:12px;margin:10px 0 0;display:none;max-height:320px;object-fit:cover">':'')+
         (tap?'<div style="margin-top:8px;color:#9a9ad6;font-weight:600;font-size:13px"><i class="ti ti-list-numbers"></i> View batting order \u203a</div>':'')+
+        alertShareBtns(a)+
         '</div>';
     }).join('');
+    mine.forEach(function(a){ if(a.photo) loadAlertPhoto(a.photo,'apicf-'+a.photo); });
   }
   function showNextAlert(){
     if(document.querySelector('.phone').classList.contains('locked')) return;     // not until signed in
@@ -3273,8 +3381,15 @@
     document.getElementById('alertTime').textContent = ago(curAlert.ts);
     var ob=document.getElementById('alertOpenBtn');
     if(ob) ob.style.display=(curAlert.kind==='lineup'&&curAlert.evKey)?'':'none';
+    var lb=document.getElementById('alertLinkBtn'), sb=document.getElementById('alertShareBtn');
+    if(lb) lb.style.display=curAlert.link?'':'none';
+    if(sb) sb.style.display=curAlert.link?'':'none';
+    var pic=document.getElementById('alertPic');
+    if(pic){ pic.style.display='none'; pic.removeAttribute('src'); if(curAlert.photo) loadAlertPhoto(curAlert.photo,'alertPic'); }
     document.getElementById('alertModal').style.display='flex';
   }
+  function openCurAlertLink(){ if(curAlert) openAlertLink(curAlert.id); }
+  function shareCurAlert(){ if(curAlert) shareAlert(curAlert.id); }
   function openCurAlertTarget(){
     var a=curAlert; if(a) ackId(a.id);
     document.getElementById('alertModal').style.display='none'; curAlert=null; renderAlertsFeed();
