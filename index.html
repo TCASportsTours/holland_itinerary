@@ -502,7 +502,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ap · feedback-thanks-autodismiss</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24aq · follow-the-tour</div>
     </section>
 
     <!-- TODAY -->
@@ -565,6 +565,7 @@
         <div class="tile acc-orange" onclick="openHowTo()"><span class="tbadge"><i class="ti ti-help-circle"></i></span><div>How to use</div></div>
         <div class="tile acc-purple" onclick="openScoring()"><span class="tbadge"><i class="ti ti-list-numbers"></i></span><div>Scoring app guide</div></div>
         <div class="tile acc-teal" onclick="openFeedback()"><span class="tbadge"><i class="ti ti-message-2-heart"></i></span><div>Send feedback</div></div>
+        <div class="tile acc-orange" onclick="openSocials()"><span class="tbadge"><i class="ti ti-brand-instagram"></i></span><div>Follow the tour</div></div>
         <div class="tile acc-orange" id="squadTile" style="display:none" onclick="openRoster()"><span class="tbadge"><i class="ti ti-clipboard-list"></i></span><div>Squad list</div></div>
         <div class="tile acc-purple" id="voteTile" style="display:none" onclick="openVoteResults()"><span class="tbadge"><i class="ti ti-trophy"></i></span><div>Players&rsquo; Player<span id="voteTileSub" style="display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px"></span></div></div>
         <div class="tile acc-teal" id="mealTile" style="display:none" onclick="openMealOrders()"><span class="tbadge"><i class="ti ti-tools-kitchen-2"></i></span><div>Meal pre-orders</div></div>
@@ -723,6 +724,8 @@
   var MEALS=[], VOTE_SQUADS=[], _ballot={}, _order={}, _orderName='', _mealIdx=-1, _mealTeam='', _mealOrdersData={};
   var MORECONTENT=[], TEAMMETA={}, MOREGROUPS=[], FAQ=[];
   var DEFAULT_SHOP='https://shop.globalcricketseries.com/';
+  var DEFAULT_INSTAGRAM='https://www.instagram.com/globalcricketseries';
+  var DEFAULT_FACEBOOK='https://www.facebook.com/share/1D3TbAyZfd/';
   var EMERGENCY_NUMS={
     'England':{dial:'999',label:'999 (or 112) — police, fire, ambulance'},'Wales':{dial:'999',label:'999 (or 112)'},
     'Scotland':{dial:'999',label:'999 (or 112)'},'Ireland':{dial:'112',label:'112 or 999'},
@@ -2680,6 +2683,19 @@
   function showBehaviour(){ if(SETTINGS.behaviourShow===false) return false; return hasVal(SETTINGS.behaviourUrl); }
   function shopUrl(){ return normUrl(hasVal(SETTINGS.shopUrl)?SETTINGS.shopUrl:DEFAULT_SHOP); }
   function showShop(){ return SETTINGS.shopShow!==false; }   // on by default; organiser can switch it off
+  function instaUrl(){ return normUrl(hasVal(SETTINGS.instagramUrl)?SETTINGS.instagramUrl:DEFAULT_INSTAGRAM); }
+  function fbUrl(){ return normUrl(hasVal(SETTINGS.facebookUrl)?SETTINGS.facebookUrl:DEFAULT_FACEBOOK); }
+  function tourHashtag(){ return hasVal(SETTINGS.hashtag)?String(SETTINGS.hashtag).replace(/^#/,''):''; }
+  function openSocials(){
+    showOnly('s-detail'); document.getElementById('appTitle').textContent='Follow the tour'; document.getElementById('appSub').textContent='Global Cricket Series';
+    var tag=tourHashtag();
+    var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti ti-heart-handshake"></i> Follow Global Cricket Series</div>'+
+      '<div style="font-size:14px;line-height:1.65;color:var(--muted);padding:4px 2px 12px">Match photos, results and behind-the-scenes from the tour land on our socials. Give us a follow so you don\u2019t miss them \u2014 and tag us in your own snaps'+(tag?(' with <b style="color:#fff">#'+esc(tag)+'</b>'):'')+'.</div>'+
+      '<a class="cta" href="'+attr(instaUrl())+'" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center;box-sizing:border-box;background:rgba(255,124,26,.16);color:#ff9d52;border:1px solid rgba(255,124,26,.4)"><i class="ti ti-brand-instagram"></i> Follow on Instagram</a>'+
+      '<a class="cta" href="'+attr(fbUrl())+'" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center;box-sizing:border-box;margin-top:10px;background:rgba(119,119,201,.16);color:#9a9ad6;border:1px solid rgba(119,119,201,.4)"><i class="ti ti-brand-facebook"></i> Follow on Facebook</a>'+
+      '</div>';
+    document.getElementById('detailBody').innerHTML=h;
+  }
   function openShop(){
     showOnly('s-detail'); document.getElementById('appTitle').textContent='Shop'; document.getElementById('appSub').textContent='Kit & merch';
     var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti ti-shopping-bag"></i> Get kitted out</div>'+
