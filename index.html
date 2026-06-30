@@ -502,7 +502,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24al · app-feedback</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24an · feedback-dark-inputs</div>
     </section>
 
     <!-- TODAY -->
@@ -2931,13 +2931,14 @@
   function openFeedback(){
     showOnly('s-detail'); document.getElementById('appTitle').textContent='Send feedback'; document.getElementById('appSub').textContent='Goes to the tournament team';
     var nm=(typeof currentPlayer!=='undefined'&&currentPlayer)?currentPlayer:'';
+    var inSty='width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--surface-line);color:#fff;font-family:inherit;font-size:14px;padding:11px 12px;border-radius:10px;color-scheme:dark';
     var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti ti-message-2-heart"></i> Tell us what you think</div>'+
-      '<div style="font-size:13px;line-height:1.6;color:var(--muted);padding:2px 2px 12px">Spotted something wrong, or got a suggestion for the app or the tour? Send it straight to the tournament team. They can\u2019t reply in the app, so leave a contact detail in your message if you\u2019d like a response.</div>'+
+      '<div style="font-size:13px;line-height:1.6;color:var(--muted);padding:2px 2px 12px">Found a bug having a nap on the job? Had a stroke of genius in the breakfast queue? Something that\u2019d make the app or the tour better? Fire it over. Rave reviews, gentle grumbles and gloriously daft ideas all welcome \u2014 we read every one. We can\u2019t write back in here, so pop your name or number in if you\u2019d like a reply (and aren\u2019t just here to tell us the bus was late again).</div>'+
       '<div style="padding:0 2px">'+
         '<label style="display:block;font-size:12px;color:var(--muted);margin:0 0 4px">Your name (optional)</label>'+
-        '<input id="fbName" value="'+attr(nm)+'" placeholder="Name" style="width:100%;box-sizing:border-box;margin:0 0 12px">'+
+        '<input id="fbName" value="'+attr(nm)+'" placeholder="Name" style="'+inSty+';margin:0 0 12px">'+
         '<label style="display:block;font-size:12px;color:var(--muted);margin:0 0 4px">Your feedback</label>'+
-        '<textarea id="fbText" rows="6" placeholder="Type your message\u2026" style="width:100%;box-sizing:border-box;resize:vertical"></textarea>'+
+        '<textarea id="fbText" rows="6" placeholder="Go on then\u2026 what\u2019s on your mind? (yes, &lsquo;more chips at lunch&rsquo; counts)" style="'+inSty+';resize:vertical"></textarea>'+
         '<button class="cta" id="fbSend" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:12px" onclick="submitFeedback()"><i class="ti ti-send"></i> Send to the tournament team</button>'+
       '</div></div>';
     document.getElementById('detailBody').innerHTML=h;
