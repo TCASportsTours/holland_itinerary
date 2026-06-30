@@ -502,7 +502,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ah · officials-tile-order</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ai · swim-ability</div>
     </section>
 
     <!-- TODAY -->
@@ -1225,6 +1225,18 @@
   function pNumBadge(name,team){ var n=pNum(name,team); return n?'<span class="snum">'+esc(n)+'</span>':''; }
   function lineupKeyFor(team,e){ return team+'|'+eventKey(e); }
   function lineupKey(e){ return lineupKeyFor(currentSquad,e); }
+  function swimMeta(s){
+    var k=String(s||'').trim().toLowerCase();
+    if(k==='strong') return {c:'#51cea7',label:'Strong swimmer',i:'ti-swimming'};
+    if(k==='competent'||k==='moderate') return {c:'#ff9d2e',label:'Competent swimmer',i:'ti-swimming'};
+    if(k==='weak') return {c:'#ff5a5a',label:'Weak swimmer',i:'ti-swimming'};
+    if(k==='non-swimmer'||k==='non swimmer'||k==='nonswimmer'||k==='none'||k==='cannot swim') return {c:'#ff5a5a',label:'Non-swimmer',i:'ti-alert-triangle'};
+    return null;
+  }
+  function swimBadge(s){
+    var m=swimMeta(s); if(!m) return '';
+    return '<span title="'+attr(m.label)+'" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:'+m.c+';background:'+m.c+'1a;border:1px solid '+m.c+'55;padding:2px 8px;border-radius:999px;white-space:nowrap"><i class="ti '+m.i+'" style="font-size:13px"></i>'+esc(m.label)+'</span>';
+  }
   function oppName(e){ var t=(e&&e.teams)||[]; for(var i=0;i<t.length;i++){ if(t[i]&&t[i]!==currentSquad) return t[i]; } return ''; }
   function fetchLineups(cb){
     getJSON('?type=lineups').then(function(r){return r.ok?r.json():{};}).then(function(o){ if(o&&typeof o==='object'&&!Array.isArray(o)) LINEUPS=o; cb&&cb(); }).catch(function(){ cb&&cb(); });
@@ -1932,6 +1944,7 @@
       var med=hasVal(p.medical), diet=hasVal(p.dietary);
       h+='<div class="pcard"><div class="ptop"><span class="pname">'+pNumBadge(p.name,_rosterTeam)+esc(p.name||'')+'</span>'+
         (p.role?'<span class="prole">'+esc(p.role)+'</span>':'')+call+'</div>'+
+        (swimBadge(p.swim) ? '<div style="margin:7px 2px 1px">'+swimBadge(p.swim)+'</div>' : '')+
         (hasVal(p.room) ? '<div class="pdet"><div class="d"><div class="k">Room</div><div class="v">'+esc(p.room)+'</div></div></div>' : '')+
         (function(){ var b='';
           if(med) b+='<button class="pbtn med" onclick="showRosterInfo('+idx+',\'medical\')"><i class="ti ti-pill"></i> Medical<span class="pdotred"></span><i class="ti ti-chevron-right pbarr"></i></button>';
@@ -2707,7 +2720,7 @@
     var h='';
     if(isStaff){
       h+=helpGuide(true,'#7bdcc0','ti-whistle','Using the app \u2014 staff & coaches',[
-        ['Squad list (confidential).','Each player\u2019s medical, dietary and room info, with a tap-to-call button for their parent/guardian. Tournament staff get team tabs to switch squads.'],
+        ['Squad list (confidential).','Each player\u2019s medical, dietary and room info, with a tap-to-call button for their parent/guardian. Tournament staff get team tabs to switch squads.<div style="margin-top:9px;line-height:1.9">Each player also shows a <b>swimming tag</b> taken from the spreadsheet, so you can plan water-based activities at a glance: '+swimBadge('Strong')+' '+swimBadge('Competent')+' '+swimBadge('Weak')+' '+swimBadge('Non-Swimmer')+'. Green is a strong swimmer, orange competent, red weak or a non-swimmer. Players with nothing recorded show no tag.</div>'],
         ['Line-ups.','Set the batting order for a match, share it with your squad, and send it straight to the scorer.'],
         ['Meal pre-orders.','See who\u2019s ordered and who hasn\u2019t, per team (team tabs for tournament staff), so you can chase stragglers.'],
         ['Send alerts.','Push an announcement to your whole squad, a single player, or just the other coaches \u2014 it pops up in their app and they have to acknowledge it.'],
