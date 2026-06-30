@@ -502,7 +502,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ai · swim-ability</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24aj · swim-icon-only</div>
     </section>
 
     <!-- TODAY -->
@@ -1235,7 +1235,12 @@
   }
   function swimBadge(s){
     var m=swimMeta(s); if(!m) return '';
-    return '<span title="'+attr(m.label)+'" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:'+m.c+';background:'+m.c+'1a;border:1px solid '+m.c+'55;padding:2px 8px;border-radius:999px;white-space:nowrap"><i class="ti '+m.i+'" style="font-size:13px"></i>'+esc(m.label)+'</span>';
+    return '<span title="'+attr(m.label)+'" aria-label="'+attr(m.label)+'" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;color:'+m.c+';background:'+m.c+'1a;border:1px solid '+m.c+'66"><i class="ti '+m.i+'" style="font-size:14px"></i></span>';
+  }
+  function swimLegend(){
+    return ['Strong','Competent','Weak','Non-Swimmer'].map(function(s){ var m=swimMeta(s);
+      return '<span style="display:inline-flex;align-items:center;gap:6px;margin:0 14px 7px 0;white-space:nowrap">'+swimBadge(s)+'<span style="color:'+m.c+';font-weight:700;font-size:13px">'+esc(m.label.replace(' swimmer','').replace('Non-swimmer','Non-swimmer'))+'</span></span>';
+    }).join('');
   }
   function oppName(e){ var t=(e&&e.teams)||[]; for(var i=0;i<t.length;i++){ if(t[i]&&t[i]!==currentSquad) return t[i]; } return ''; }
   function fetchLineups(cb){
@@ -2720,7 +2725,7 @@
     var h='';
     if(isStaff){
       h+=helpGuide(true,'#7bdcc0','ti-whistle','Using the app \u2014 staff & coaches',[
-        ['Squad list (confidential).','Each player\u2019s medical, dietary and room info, with a tap-to-call button for their parent/guardian. Tournament staff get team tabs to switch squads.<div style="margin-top:9px;line-height:1.9">Each player also shows a <b>swimming tag</b> taken from the spreadsheet, so you can plan water-based activities at a glance: '+swimBadge('Strong')+' '+swimBadge('Competent')+' '+swimBadge('Weak')+' '+swimBadge('Non-Swimmer')+'. Green is a strong swimmer, orange competent, red weak or a non-swimmer. Players with nothing recorded show no tag.</div>'],
+        ['Squad list (confidential).','Each player\u2019s medical, dietary and room info, with a tap-to-call button for their parent/guardian. Tournament staff get team tabs to switch squads.<div style="margin-top:9px">Each player shows a small <b>swimming icon</b> taken from the spreadsheet, so you can plan water-based activities at a glance:<div style="margin-top:8px;display:flex;flex-wrap:wrap">'+swimLegend()+'</div><div style="margin-top:1px;color:var(--muted);font-size:13px">Green = strong, orange = competent, red = weak or a non-swimmer. Players with nothing recorded show no icon.</div></div>'],
         ['Line-ups.','Set the batting order for a match, share it with your squad, and send it straight to the scorer.'],
         ['Meal pre-orders.','See who\u2019s ordered and who hasn\u2019t, per team (team tabs for tournament staff), so you can chase stragglers.'],
         ['Send alerts.','Push an announcement to your whole squad, a single player, or just the other coaches \u2014 it pops up in their app and they have to acknowledge it.'],
