@@ -502,7 +502,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24an · feedback-dark-inputs</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ap · feedback-thanks-autodismiss</div>
     </section>
 
     <!-- TODAY -->
@@ -2955,7 +2955,8 @@
       .then(function(r){return r.json();})
       .then(function(res){
         if(res&&res.ok){
-          document.getElementById('detailBody').innerHTML='<div class="travelbox" style="margin-top:8px;text-align:center;padding:22px 16px"><div style="width:54px;height:54px;border-radius:50%;background:rgba(81,206,167,.16);color:var(--teal);display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><i class="ti ti-check" style="font-size:26px"></i></div><div style="font-weight:700;color:#fff;font-size:16px">Thanks \u2014 that\u2019s been sent.</div><div style="font-size:13px;color:var(--muted);margin-top:6px;line-height:1.6">The tournament team will see your feedback. Thanks for helping us make the tour better.</div><button class="cta" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:16px;background:rgba(255,255,255,.06)" onclick="appBack()"><i class="ti ti-arrow-left"></i> Back</button></div>';
+          document.getElementById('detailBody').innerHTML='<div class="travelbox" style="margin-top:8px;text-align:center;padding:26px 16px"><div style="width:54px;height:54px;border-radius:50%;background:rgba(81,206,167,.16);color:var(--teal);display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><i class="ti ti-check" style="font-size:26px"></i></div><div style="font-weight:700;color:#fff;font-size:16px">Thanks \u2014 that\u2019s been sent.</div><div style="font-size:13px;color:var(--muted);margin-top:6px;line-height:1.6">The tournament team will see your feedback. Thanks for helping us make the tour better.</div></div>';
+          setTimeout(function(){ if(document.getElementById('s-detail').classList.contains('active')) appBack(); }, 2000);
         } else { throw new Error('refused'); }
       })
       .catch(function(){ toast('Couldn\u2019t send \u2014 check your connection and try again'); if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-send"></i> Send to the tournament team'; } });
