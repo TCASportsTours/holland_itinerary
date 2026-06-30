@@ -505,7 +505,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24az · clear-removes-alert</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bb · drop-alert-share</div>
     </section>
 
     <!-- TODAY -->
@@ -646,8 +646,7 @@
       <img id="alertPic" alt="Alert photo" style="width:100%;border-radius:12px;margin:0 0 10px;display:none;max-height:300px;object-fit:cover">
       <div class="alertTime" id="alertTime"></div>
       <button class="alertBtn" id="alertOpenBtn" style="display:none;background:rgba(119,119,201,.18);color:#9a9ad6;border:1px solid rgba(119,119,201,.5);margin-bottom:10px" onclick="openCurAlertTarget()"><i class="ti ti-list-numbers"></i> View batting order</button>
-      <button class="alertBtn" id="alertLinkBtn" style="display:none;background:rgba(119,119,201,.18);color:#9a9ad6;border:1px solid rgba(119,119,201,.5);margin-bottom:10px" onclick="openCurAlertLink()"><i class="ti ti-external-link"></i> Open link</button>
-      <button class="alertBtn" id="alertShareBtn" style="display:none;background:rgba(255,124,26,.18);color:#ff9d52;border:1px solid rgba(255,124,26,.5);margin-bottom:10px" onclick="shareCurAlert()"><i class="ti ti-share-2"></i> Share to my socials</button>
+      <button class="alertBtn" id="alertLinkBtn" style="display:none;background:rgba(119,119,201,.18);color:#9a9ad6;border:1px solid rgba(119,119,201,.5);margin-bottom:10px" onclick="openCurAlertLink()"><i class="ti ti-external-link"></i> Open post</button>
       <button class="alertBtn" onclick="ackAlert()">OK, got it</button>
     </div>
   </div>
@@ -783,13 +782,13 @@
   function lineupBtn(e){
     if(!isMatch(e)) return '';
     var lu=(LINEUPS||{})[lineupKey(e)], has=lu&&lu.order&&lu.order.length;
-    if(isStaff){
+    if(isStaff && !isAdmin){
       var roster=((PLAYERS||{})[currentSquad]||[]).filter(function(n){return n&&n.trim();});
       if(!roster.length) return '';                                 // no squad -> nothing to order
       var label = has ? ('Batting order \u00b7 '+lu.order.length) : 'Set batting order';
       return '<button class="rollbtn lineup'+(has?' done':'')+'" onclick="event.stopPropagation();openLineup('+e._i+')"><i class="ti ti-list-numbers"></i> '+label+'</button>';
     }
-    // players & supporters: show only once an order is published for their squad -> read-only view
+    // tournament staff, players & supporters: read-only, and only once an order is published
     if(has) return '<button class="rollbtn lineup" onclick="event.stopPropagation();openLineupView('+e._i+')"><i class="ti ti-list-numbers"></i> Batting order</button>';
     return '';
   }
@@ -1128,7 +1127,7 @@
       '<div id="saPhotoPrev" style="display:none;margin-top:10px"><img id="saPhotoImg" alt="Preview" style="max-width:160px;border-radius:10px;display:block;border:1px solid var(--surface-line)"><button type="button" onclick="clearStaffPhoto()" style="margin-top:8px;background:none;border:0;color:#ff8a8a;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><i class="ti ti-x"></i> Remove photo</button></div>'+
       '<div class="eyebrow" style="margin:14px 0 6px">Link (optional)</div>'+
       '<input id="saLink" placeholder="e.g. your Instagram post link" style="'+inSty+'">'+
-      '<div style="display:flex;gap:7px;font-size:11px;color:var(--faint);margin:9px 2px 0;line-height:1.5"><i class="ti ti-info-circle" style="color:#9a9ad6;font-size:14px;flex:none;margin-top:1px"></i><span>A link adds a Share button so people can post your highlight to their own socials. Only send photos you\u2019re happy to share with everyone the alert reaches.</span></div>'+
+      '<div style="display:flex;gap:7px;font-size:11px;color:var(--faint);margin:9px 2px 0;line-height:1.5"><i class="ti ti-info-circle" style="color:#9a9ad6;font-size:14px;flex:none;margin-top:1px"></i><span>A link adds an <b>Open post</b> button that takes people straight to your post. Only send photos you\u2019re happy to share with everyone the alert reaches.</span></div>'+
       '<button class="cta" onclick="sendStaffAlert()" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:14px"><i class="ti ti-send"></i> Send alert</button>'+
       '</div>';
     document.getElementById('detailBody').innerHTML=h;
@@ -3351,9 +3350,8 @@
   function alertShareBtns(a){
     if(!a.link) return '';
     var idArg=JSON.stringify(a.id).replace(/"/g,'&quot;');
-    return '<div style="display:flex;gap:8px;margin-top:10px">'+
-      '<button class="rollbtn" onclick="event.stopPropagation();openAlertLink('+idArg+')"><i class="ti ti-external-link"></i> Open</button>'+
-      '<button class="rollbtn" style="background:rgba(255,124,26,.16);color:#ff9d52;border-color:rgba(255,124,26,.4)" onclick="event.stopPropagation();shareAlert('+idArg+')"><i class="ti ti-share-2"></i> Share</button>'+
+    return '<div style="margin-top:10px">'+
+      '<button class="rollbtn" onclick="event.stopPropagation();openAlertLink('+idArg+')"><i class="ti ti-external-link"></i> Open post</button>'+
     '</div>';
   }
   function renderAlertsFeed(){
@@ -3385,9 +3383,8 @@
     document.getElementById('alertTime').textContent = ago(curAlert.ts);
     var ob=document.getElementById('alertOpenBtn');
     if(ob) ob.style.display=(curAlert.kind==='lineup'&&curAlert.evKey)?'':'none';
-    var lb=document.getElementById('alertLinkBtn'), sb=document.getElementById('alertShareBtn');
+    var lb=document.getElementById('alertLinkBtn');
     if(lb) lb.style.display=curAlert.link?'':'none';
-    if(sb) sb.style.display=curAlert.link?'':'none';
     var pic=document.getElementById('alertPic');
     if(pic){ pic.style.display='none'; pic.removeAttribute('src'); if(curAlert.photo) loadAlertPhoto(curAlert.photo,'alertPic'); }
     document.getElementById('alertModal').style.display='flex';
