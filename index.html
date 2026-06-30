@@ -502,7 +502,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ak · sacs-name-howto-tiles</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24al · app-feedback</div>
     </section>
 
     <!-- TODAY -->
@@ -564,6 +564,7 @@
         <div class="tile acc-purple" onclick="openHandover()"><span class="tbadge"><i class="ti ti-heart-handshake"></i></span><div>Handover of Care</div></div>
         <div class="tile acc-orange" onclick="openHowTo()"><span class="tbadge"><i class="ti ti-help-circle"></i></span><div>How to use</div></div>
         <div class="tile acc-purple" onclick="openScoring()"><span class="tbadge"><i class="ti ti-list-numbers"></i></span><div>Scoring app guide</div></div>
+        <div class="tile acc-teal" onclick="openFeedback()"><span class="tbadge"><i class="ti ti-message-2-heart"></i></span><div>Send feedback</div></div>
         <div class="tile acc-orange" id="squadTile" style="display:none" onclick="openRoster()"><span class="tbadge"><i class="ti ti-clipboard-list"></i></span><div>Squad list</div></div>
         <div class="tile acc-purple" id="voteTile" style="display:none" onclick="openVoteResults()"><span class="tbadge"><i class="ti ti-trophy"></i></span><div>Players&rsquo; Player<span id="voteTileSub" style="display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px"></span></div></div>
         <div class="tile acc-teal" id="mealTile" style="display:none" onclick="openMealOrders()"><span class="tbadge"><i class="ti ti-tools-kitchen-2"></i></span><div>Meal pre-orders</div></div>
@@ -2925,6 +2926,38 @@
       '<div style="font-size:13px;line-height:1.6;color:var(--muted);padding:2px 2px 10px">Step-by-step for scorers using the Global Cricket Series scoring app, including what to do if rain interrupts play.</div></div>'+
       '<div style="padding:4px 2px 0">'+scoringStepsHTML()+'</div>';
     document.getElementById('detailBody').innerHTML=h;
+  }
+  function feedbackRole(){ return isStaff?'Staff':(isSupporter()?'Supporter':'Player'); }
+  function openFeedback(){
+    showOnly('s-detail'); document.getElementById('appTitle').textContent='Send feedback'; document.getElementById('appSub').textContent='Goes to the tournament team';
+    var nm=(typeof currentPlayer!=='undefined'&&currentPlayer)?currentPlayer:'';
+    var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti ti-message-2-heart"></i> Tell us what you think</div>'+
+      '<div style="font-size:13px;line-height:1.6;color:var(--muted);padding:2px 2px 12px">Spotted something wrong, or got a suggestion for the app or the tour? Send it straight to the tournament team. They can\u2019t reply in the app, so leave a contact detail in your message if you\u2019d like a response.</div>'+
+      '<div style="padding:0 2px">'+
+        '<label style="display:block;font-size:12px;color:var(--muted);margin:0 0 4px">Your name (optional)</label>'+
+        '<input id="fbName" value="'+attr(nm)+'" placeholder="Name" style="width:100%;box-sizing:border-box;margin:0 0 12px">'+
+        '<label style="display:block;font-size:12px;color:var(--muted);margin:0 0 4px">Your feedback</label>'+
+        '<textarea id="fbText" rows="6" placeholder="Type your message\u2026" style="width:100%;box-sizing:border-box;resize:vertical"></textarea>'+
+        '<button class="cta" id="fbSend" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:12px" onclick="submitFeedback()"><i class="ti ti-send"></i> Send to the tournament team</button>'+
+      '</div></div>';
+    document.getElementById('detailBody').innerHTML=h;
+  }
+  function submitFeedback(){
+    var ta=document.getElementById('fbText'), txt=ta?String(ta.value||'').trim():'';
+    if(!txt){ toast('Please type your feedback first'); if(ta)ta.focus(); return; }
+    var nm=document.getElementById('fbName'); nm=nm?String(nm.value||'').trim():'';
+    var btn=document.getElementById('fbSend'); if(btn){ btn.disabled=true; btn.innerHTML='<i class="ti ti-loader-2"></i> Sending\u2026'; }
+    var ts=Date.now(), id='fb_'+ts+'_'+Math.random().toString(36).slice(2,8);
+    var entry={ ts:ts, name:nm, role:feedbackRole(), team:(typeof currentSquad!=='undefined'?currentSquad:'')||'', text:txt };
+    var body={}; body[id]=entry;
+    fetch('/.netlify/functions/tour?type=feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json();})
+      .then(function(res){
+        if(res&&res.ok){
+          document.getElementById('detailBody').innerHTML='<div class="travelbox" style="margin-top:8px;text-align:center;padding:22px 16px"><div style="width:54px;height:54px;border-radius:50%;background:rgba(81,206,167,.16);color:var(--teal);display:flex;align-items:center;justify-content:center;margin:0 auto 12px"><i class="ti ti-check" style="font-size:26px"></i></div><div style="font-weight:700;color:#fff;font-size:16px">Thanks \u2014 that\u2019s been sent.</div><div style="font-size:13px;color:var(--muted);margin-top:6px;line-height:1.6">The tournament team will see your feedback. Thanks for helping us make the tour better.</div><button class="cta" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:16px;background:rgba(255,255,255,.06)" onclick="appBack()"><i class="ti ti-arrow-left"></i> Back</button></div>';
+        } else { throw new Error('refused'); }
+      })
+      .catch(function(){ toast('Couldn\u2019t send \u2014 check your connection and try again'); if(btn){ btn.disabled=false; btn.innerHTML='<i class="ti ti-send"></i> Send to the tournament team'; } });
   }
   function loadWeather(){
     paintWeather(29,2,30);
