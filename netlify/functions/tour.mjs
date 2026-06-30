@@ -8,6 +8,7 @@ import { getStore } from "@netlify/blobs";
 //   /tour?type=checkins    -> check-in register         (key "checkins")
 //   /tour?type=votes       -> Players' Player votes      (key "votes")
 //   /tour?type=preorders   -> meal pre-orders            (key "preorders")
+//   /tour?type=feedback    -> app feedback for staff      (key "feedback")
 //
 //   GET  -> returns whatever is stored for that slot, with a sensible empty
 //           default if nothing is there yet (null for the tour, [] for alerts,
@@ -17,7 +18,7 @@ import { getStore } from "@netlify/blobs";
 //           votes, pre-orders and check-ins are MERGED by their top-level keys
 //           so two phones submitting at the same moment can't wipe each other.
 
-const MERGE = new Set(["checkins", "votes", "preorders", "lineups"]);
+const MERGE = new Set(["checkins", "votes", "preorders", "lineups", "feedback"]);
 
 export default async (req) => {
   const headers = {
