@@ -44,6 +44,20 @@ export default async (req) => {
   // DELETE: wipe a test-data slot back to empty so a tour can be re-tested from scratch.
   // Restricted to the submission slots so a stray/hostile call can NEVER clear the published tour.
   if (req.method === "DELETE") {
+    // Feedback can be removed one entry at a time (?id=...) or cleared wholesale.
+    if (type === "feedback") {
+      const id = url.searchParams.get("id");
+      if (id) {
+        let cur = {};
+        try { cur = JSON.parse((await store.get(key)) || "{}"); } catch { cur = {}; }
+        if (!cur || typeof cur !== "object" || Array.isArray(cur)) cur = {};
+        delete cur[id];
+        await store.set(key, JSON.stringify(cur));
+        return reply(headers, 200, { ok: true, deleted: id });
+      }
+      await store.set(key, "{}");
+      return reply(headers, 200, { ok: true, cleared: key });
+    }
     const RESETTABLE = new Set(["votes", "preorders", "checkins"]);
     if (!RESETTABLE.has(type)) return reply(headers, 400, { ok: false, error: "refused: that slot can't be cleared" });
     await store.set(key, "{}");
