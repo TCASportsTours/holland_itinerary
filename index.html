@@ -65,6 +65,9 @@
   .screen{display:none;animation:fade .25s ease}
   .screen.active{display:block}
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes followpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,124,26,0)}50%{box-shadow:0 0 0 4px rgba(255,124,26,.28)}}
+  .tile.pulse{animation:followpulse 2.1s ease-in-out infinite;border-color:rgba(255,124,26,.55)}
+  @media (prefers-reduced-motion:reduce){.tile.pulse{animation:none}}
 
   .eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;color:var(--faint);margin:18px 2px 8px}
 
@@ -502,7 +505,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24aq · follow-the-tour</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24at · lineup-perms-clear-pulse</div>
     </section>
 
     <!-- TODAY -->
@@ -565,7 +568,7 @@
         <div class="tile acc-orange" onclick="openHowTo()"><span class="tbadge"><i class="ti ti-help-circle"></i></span><div>How to use</div></div>
         <div class="tile acc-purple" onclick="openScoring()"><span class="tbadge"><i class="ti ti-list-numbers"></i></span><div>Scoring app guide</div></div>
         <div class="tile acc-teal" onclick="openFeedback()"><span class="tbadge"><i class="ti ti-message-2-heart"></i></span><div>Send feedback</div></div>
-        <div class="tile acc-orange" onclick="openSocials()"><span class="tbadge"><i class="ti ti-brand-instagram"></i></span><div>Follow the tour</div></div>
+        <div class="tile acc-orange pulse" onclick="openSocials()"><span class="tbadge"><i class="ti ti-brand-instagram"></i></span><div>Follow the tour</div></div>
         <div class="tile acc-orange" id="squadTile" style="display:none" onclick="openRoster()"><span class="tbadge"><i class="ti ti-clipboard-list"></i></span><div>Squad list</div></div>
         <div class="tile acc-purple" id="voteTile" style="display:none" onclick="openVoteResults()"><span class="tbadge"><i class="ti ti-trophy"></i></span><div>Players&rsquo; Player<span id="voteTileSub" style="display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px"></span></div></div>
         <div class="tile acc-teal" id="mealTile" style="display:none" onclick="openMealOrders()"><span class="tbadge"><i class="ti ti-tools-kitchen-2"></i></span><div>Meal pre-orders</div></div>
@@ -726,6 +729,7 @@
   var DEFAULT_SHOP='https://shop.globalcricketseries.com/';
   var DEFAULT_INSTAGRAM='https://www.instagram.com/globalcricketseries';
   var DEFAULT_FACEBOOK='https://www.facebook.com/share/1D3TbAyZfd/';
+  var DEFAULT_HASHTAG='globalcricket';
   var EMERGENCY_NUMS={
     'England':{dial:'999',label:'999 (or 112) — police, fire, ambulance'},'Wales':{dial:'999',label:'999 (or 112)'},
     'Scotland':{dial:'999',label:'999 (or 112)'},'Ireland':{dial:'112',label:'112 or 999'},
@@ -1304,8 +1308,8 @@
       h+='<div class="eyebrow" style="margin-top:16px;color:#7bdcc0"><i class="ti ti-list-numbers"></i> '+esc(currentSquad)+' batting order</div>';
       h+=lineupOrderHTML(currentSquad,lu.order);
     }
-    if(isStaff) h+='<button class="cibig" onclick="openLineup('+e._i+')"><i class="ti ti-list-numbers"></i> '+(has?'Edit batting order':'Set batting order')+'</button>';
-    if(has&&isStaff) h+=lineupShareSection(e);
+    if(isStaff&&!isAdmin) h+='<button class="cibig" onclick="openLineup('+e._i+')"><i class="ti ti-list-numbers"></i> '+(has?'Edit batting order':'Set batting order')+'</button>';
+    if(has&&isStaff&&!isAdmin) h+=lineupShareSection(e);
     host.innerHTML=h;
   }
   function openLineupView(i){
@@ -1324,12 +1328,12 @@
       } else {
         h+='<div class="readonly" style="justify-content:flex-start"><i class="ti ti-info-circle"></i> No batting order has been posted yet.</div>';
       }
-      if(isStaff) h+='<button class="cibig" onclick="openLineup('+e._i+')" style="margin-top:14px"><i class="ti ti-list-numbers"></i> '+(has?'Edit batting order':'Set batting order')+'</button>';
+      if(isStaff&&!isAdmin) h+='<button class="cibig" onclick="openLineup('+e._i+')" style="margin-top:14px"><i class="ti ti-list-numbers"></i> '+(has?'Edit batting order':'Set batting order')+'</button>';
       document.getElementById('detailBody').innerHTML=h;
     });
   }
   function openLineup(i){
-    var e=EVENTS[i]; if(!e||!isStaff) return;
+    var e=EVENTS[i]; if(!e||!isStaff||isAdmin) return;
     _lineupEvent=e; _lineupKey=lineupKey(e);
     fetchLineups(function(){
       var lu=LINEUPS[_lineupKey]; _lineup=(lu&&Array.isArray(lu.order))?lu.order.slice():[];
@@ -1403,7 +1407,18 @@
     if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done).catch(function(){ window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank','noopener'); }); }
     else window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank','noopener');
   }
-  function clearLineup(){ if(!confirm('Clear this batting order?')) return; _lineup=[]; renderLineup(); }
+  function clearLineup(){
+    if(!confirm('Clear this batting order? This removes it for everyone, not just on your phone.')) return;
+    var key=_lineupKey, e=_lineupEvent;
+    var obj={order:[], ts:Date.now(), by:(currentPlayer||'Staff'), cleared:true};
+    var body={}; body[key]=obj;
+    fetch('/.netlify/functions/tour?type=lineups',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json();}).then(function(j){
+        _lineup=[]; LINEUPS[key]=obj;
+        if(j&&j.ok){ toast('Batting order cleared'); } else { toast('Cleared on your phone \u2014 may not have synced'); }
+        if(e){ renderToday(); openEvent(e._i); } else { renderLineup(); }
+      }).catch(function(){ _lineup=[]; LINEUPS[key]=obj; renderLineup(); toast('Cleared locally \u2014 check your connection'); });
+  }
 
   /* ===== Scorer / umpire (officials) mode: matches, squads, batting orders only ===== */
   function isOfficial(){ return role==='official'; }
@@ -2685,14 +2700,37 @@
   function showShop(){ return SETTINGS.shopShow!==false; }   // on by default; organiser can switch it off
   function instaUrl(){ return normUrl(hasVal(SETTINGS.instagramUrl)?SETTINGS.instagramUrl:DEFAULT_INSTAGRAM); }
   function fbUrl(){ return normUrl(hasVal(SETTINGS.facebookUrl)?SETTINGS.facebookUrl:DEFAULT_FACEBOOK); }
-  function tourHashtag(){ return hasVal(SETTINGS.hashtag)?String(SETTINGS.hashtag).replace(/^#/,''):''; }
+  function tourHashtag(){ return hasVal(SETTINGS.hashtag)?String(SETTINGS.hashtag).replace(/^#/,''):DEFAULT_HASHTAG; }
+  function tourTag(){
+    var d=String(SETTINGS.destination||'').replace(/\b20\d{2}\b/g,'').replace(/[^A-Za-z0-9 ]/g,' ').trim();
+    if(!d) return '';
+    return 'GCS'+d.split(/\s+/).filter(Boolean).map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join('');
+  }
+  function igHandle(){ var m=String(instaUrl()).match(/instagram\.com\/([^\/?#]+)/i); return m?m[1]:'globalcricketseries'; }
+  function socialTagLine(){
+    var tags=['#'+tourHashtag()]; var tt=tourTag(); if(tt) tags.push('#'+tt);
+    return '@'+igHandle()+' '+tags.join(' ');
+  }
+  function copyTag(){
+    var txt=socialTagLine();
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){toast('Copied \u2014 paste it into your caption');}).catch(function(){toast(txt);}); }
+    else { toast(txt); }
+  }
   function openSocials(){
     showOnly('s-detail'); document.getElementById('appTitle').textContent='Follow the tour'; document.getElementById('appSub').textContent='Global Cricket Series';
-    var tag=tourHashtag();
+    var tt=tourTag(), tagLine=socialTagLine();
     var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti ti-heart-handshake"></i> Follow Global Cricket Series</div>'+
-      '<div style="font-size:14px;line-height:1.65;color:var(--muted);padding:4px 2px 12px">Match photos, results and behind-the-scenes from the tour land on our socials. Give us a follow so you don\u2019t miss them \u2014 and tag us in your own snaps'+(tag?(' with <b style="color:#fff">#'+esc(tag)+'</b>'):'')+'.</div>'+
+      '<div style="font-size:14px;line-height:1.65;color:var(--muted);padding:4px 2px 12px">We\u2019ll be posting match highlights, results and photos from the tour all week. Give us a follow so you don\u2019t miss them.</div>'+
       '<a class="cta" href="'+attr(instaUrl())+'" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center;box-sizing:border-box;background:rgba(255,124,26,.16);color:#ff9d52;border:1px solid rgba(255,124,26,.4)"><i class="ti ti-brand-instagram"></i> Follow on Instagram</a>'+
       '<a class="cta" href="'+attr(fbUrl())+'" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center;box-sizing:border-box;margin-top:10px;background:rgba(119,119,201,.16);color:#9a9ad6;border:1px solid rgba(119,119,201,.4)"><i class="ti ti-brand-facebook"></i> Follow on Facebook</a>'+
+      '</div>'+
+      '<div class="travelbox" style="margin-top:12px"><div class="th"><i class="ti ti-camera"></i> Posting your own?</div>'+
+      '<div style="font-size:14px;line-height:1.65;color:var(--muted);padding:4px 2px 10px">Tag us and we\u2019ll see it \u2014 we love resharing your photos. Add this to your caption or story:</div>'+
+      '<div style="display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--surface-line);border-radius:10px;padding:11px 12px">'+
+        '<span style="flex:1;min-width:0;color:#fff;font-weight:600;font-size:14px;word-break:break-word">'+esc(tagLine)+'</span>'+
+        '<button class="rollbtn" style="flex:none" onclick="copyTag()"><i class="ti ti-copy"></i> Copy</button>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--faint);padding:9px 2px 0;line-height:1.55">The <b>@</b> tags our account so we get notified; the <b>#</b> tags help everyone find the tour\u2019s posts'+(tt?(' \u2014 <b style="color:#fff">#'+esc(tt)+'</b> is just for this tour.'):'.')+'</div>'+
       '</div>';
     document.getElementById('detailBody').innerHTML=h;
   }
