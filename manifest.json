@@ -1,6 +1,6 @@
 {
-  "name": "GCS Tour",
-  "short_name": "GCS Tour",
+  "name": "SACS Tour",
+  "short_name": "SACS Tour",
   "description": "Tour itinerary, fixtures, batting orders and contacts for players, staff, supporters and match officials.",
   "start_url": ".",
   "scope": ".",
