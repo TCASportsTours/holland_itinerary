@@ -505,7 +505,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24ax · inapp-alert-photos</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24az · clear-removes-alert</div>
     </section>
 
     <!-- TODAY -->
@@ -1479,14 +1479,26 @@
     else window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank','noopener');
   }
   function clearLineup(){
-    if(!confirm('Clear this batting order? This removes it for everyone, not just on your phone.')) return;
-    var key=_lineupKey, e=_lineupEvent;
+    if(!confirm('Clear this batting order? This removes it \u2014 and the alert about it \u2014 for everyone, not just on your phone.')) return;
+    var key=_lineupKey, e=_lineupEvent, evk=eventKey(e), sq=currentSquad;
     var obj={order:[], ts:Date.now(), by:(currentPlayer||'Staff'), cleared:true};
     var body={}; body[key]=obj;
+    var isLineupAlert=function(x){ return x && x.kind==='lineup' && x.evKey===evk && (x.team===sq || (x.team==='officials' && x.squad===sq)); };
     fetch('/.netlify/functions/tour?type=lineups',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})
       .then(function(r){return r.json();}).then(function(j){
         _lineup=[]; LINEUPS[key]=obj;
-        if(j&&j.ok){ toast('Batting order cleared'); } else { toast('Cleared on your phone \u2014 may not have synced'); }
+        ALERTS=(ALERTS||[]).filter(function(x){return !isLineupAlert(x);});
+        return getJSON('?type=alerts').then(function(r){return r.ok?r.json():[];}).then(function(list){
+          if(!Array.isArray(list)) list=[];
+          var next=list.filter(function(x){return !isLineupAlert(x);});
+          if(next.length!==list.length){
+            return fetch('/.netlify/functions/tour?type=alerts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(next)}).then(function(){ return j; });
+          }
+          return j;
+        }).catch(function(){ return j; });
+      }).then(function(j){
+        toast((j&&j.ok)?'Batting order cleared':'Cleared on your phone \u2014 may not have synced');
+        renderAlertsFeed();
         if(e){ renderToday(); openEvent(e._i); } else { renderLineup(); }
       }).catch(function(){ _lineup=[]; LINEUPS[key]=obj; renderLineup(); toast('Cleared locally \u2014 check your connection'); });
   }
@@ -2790,19 +2802,11 @@
   }
   function openSocials(){
     showOnly('s-detail'); document.getElementById('appTitle').textContent='Follow the tour'; document.getElementById('appSub').textContent='Global Cricket Series';
-    var tt=tourTag(), tagLine=socialTagLine();
     var h='<div class="travelbox" style="margin-top:8px"><div class="th"><i class="ti ti-heart-handshake"></i> Follow Global Cricket Series</div>'+
-      '<div style="font-size:14px;line-height:1.65;color:var(--muted);padding:4px 2px 12px">We\u2019ll be posting match highlights, results and photos from the tour all week. Give us a follow so you don\u2019t miss them.</div>'+
+      '<div style="font-size:14px;line-height:1.65;color:var(--muted);padding:4px 2px 14px">We\u2019ll be posting match highlights, results and photos from the tour all week. Give us a follow so you don\u2019t miss them.</div>'+
       '<a class="cta" href="'+attr(instaUrl())+'" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center;box-sizing:border-box;background:rgba(255,124,26,.16);color:#ff9d52;border:1px solid rgba(255,124,26,.4)"><i class="ti ti-brand-instagram"></i> Follow on Instagram</a>'+
       '<a class="cta" href="'+attr(fbUrl())+'" target="_blank" rel="noopener" style="text-decoration:none;width:100%;justify-content:center;box-sizing:border-box;margin-top:10px;background:rgba(119,119,201,.16);color:#9a9ad6;border:1px solid rgba(119,119,201,.4)"><i class="ti ti-brand-facebook"></i> Follow on Facebook</a>'+
-      '</div>'+
-      '<div class="travelbox" style="margin-top:12px"><div class="th"><i class="ti ti-camera"></i> Posting your own?</div>'+
-      '<div style="font-size:14px;line-height:1.65;color:var(--muted);padding:4px 2px 10px">Tag us and we\u2019ll see it \u2014 we love resharing your photos. Add this to your caption or story:</div>'+
-      '<div style="display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--surface-line);border-radius:10px;padding:11px 12px">'+
-        '<span style="flex:1;min-width:0;color:#fff;font-weight:600;font-size:14px;word-break:break-word">'+esc(tagLine)+'</span>'+
-        '<button class="rollbtn" style="flex:none" onclick="copyTag()"><i class="ti ti-copy"></i> Copy</button>'+
-      '</div>'+
-      '<div style="font-size:12px;color:var(--faint);padding:9px 2px 0;line-height:1.55">The <b>@</b> tags our account so we get notified; the <b>#</b> tags help everyone find the tour\u2019s posts'+(tt?(' \u2014 <b style="color:#fff">#'+esc(tt)+'</b> is just for this tour.'):'.')+'</div>'+
+      '<div style="font-size:12px;color:var(--faint);padding:14px 2px 0;line-height:1.5">Posting your own? Tag <b style="color:#cfcfd4">@'+esc(igHandle())+'</b> and we might reshare it.</div>'+
       '</div>';
     document.getElementById('detailBody').innerHTML=h;
   }
