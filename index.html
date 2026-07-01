@@ -505,7 +505,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bk · welcome-sublines</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bm · rollcall-today-only</div>
     </section>
 
     <!-- TODAY -->
@@ -772,6 +772,7 @@
   }
   function rollCallBtn(e){
     if(!isStaff) return '';
+    if(e && DEMO_TODAY && e.day > DEMO_TODAY) return '';            // only upcoming/today, not days ahead
     var roster=((PLAYERS||{})[currentSquad]||[]).filter(function(n){return n&&n.trim();});
     if(!roster.length) return '';                                   // no players for this team -> no roll call
     var en=(CHECKINS||{})[eventKey(e)]||{}, present=(en.present||[]).length, done=!!en.confirmedAt;
@@ -1281,7 +1282,7 @@
       '<div style="font-weight:700;font-style:italic;font-size:22px;color:#fff;line-height:1.15;margin:2px 2px 14px">'+esc(e.title)+'</div>'+
       rows+
       (isMatch(e)&&!isSupporter()?'<div id="lineupSlot"></div>':'')+
-      (isStaff?'<button class="cibig" onclick="openCheckin('+(e._i)+')"><i class="ti ti-clipboard-check"></i> Open check-in register</button>':'');
+      (isStaff && !(DEMO_TODAY && e.day > DEMO_TODAY) ?'<button class="cibig" onclick="openCheckin('+(e._i)+')"><i class="ti ti-clipboard-check"></i> Open check-in register</button>':'');
     showOnly('s-detail');
     document.getElementById('appTitle').textContent=e.title;
     document.getElementById('appSub').textContent=dayLabel;
