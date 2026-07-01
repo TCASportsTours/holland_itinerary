@@ -505,7 +505,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bf · logout-ts-only</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bg · controls-tab-gcs-live</div>
     </section>
 
     <!-- TODAY -->
@@ -535,9 +535,9 @@
     <section class="screen" id="s-cricket">
       <div class="placeholder" style="margin-top:48px">
         <div class="big" style="background:rgba(255,124,26,.13);border-color:rgba(255,124,26,.4);color:#ff9d52"><i class="ti ti-trophy"></i></div>
-        <b>Cricket lives in CricHeroes</b>
-        <p>Fixtures, live scoring, team sheets, batting orders and stats all run through your GCS CricHeroes app.</p>
-        <button class="cta" onclick="openGCS()"><i class="ti ti-external-link"></i> Open GCS CricHeroes</button>
+        <b>Global Cricket Series Live</b>
+        <p>Watch our live stream and follow the scores, plus individual player stats, wagon wheels and more.</p>
+        <button class="cta" onclick="openGCS()"><i class="ti ti-download"></i> Download it here</button>
         <div class="stores">
           <a href="https://apps.apple.com/us/app/global-cricket-series/id6759386148" target="_blank" rel="noopener"><i class="ti ti-brand-apple"></i> App Store</a>
           <a href="https://play.google.com/store/apps/details?id=com.cricheroes.gcs&hl=en_GB" target="_blank" rel="noopener"><i class="ti ti-brand-google-play"></i> Google Play</a>
@@ -750,7 +750,7 @@
     passport:'ti-id',id:'ti-id',health:'ti-pill',medical:'ti-pill',sun:'ti-sun',shield:'ti-shield',star:'ti-star',clock:'ti-clock',
     map:'ti-map-pin',behaviour:'ti-mood-smile',behavior:'ti-mood-smile',free:'ti-walk',time:'ti-clock'};
 
-  var titles={updates:['Alerts','Messages from tour staff'],cricket:['Cricket','Powered by CricHeroes'],more:['Tour hub','Everything else'],rules:['Tournament rules','GCS playing conditions']};
+  var titles={updates:['Alerts','Messages from tour staff'],cricket:['Cricket','Live stream, scores & stats'],more:['Tour hub','Everything else'],rules:['Tournament rules','GCS playing conditions']};
   var lastTab='today', currentSquad='Northern Knights', currentPlayer='', isStaff=false, staffPending=false, role='player', pendingRole='player';
   var _alertsBack='today', isAdmin=false, _adminPending=false;
   function isSupporter(){ return role==='supporter'; }
@@ -1619,8 +1619,8 @@
     var host=document.getElementById('offMatchList'); if(!host) return;
     var ms=officialMatches();
     var head='<div class="travelbox" style="margin:6px 0 4px"><div class="th"><i class="ti ti-trophy"></i> Live scoring &amp; full results</div>'+
-      '<div style="font-size:13px;line-height:1.5;color:var(--muted);padding:2px 2px 10px">Fixtures, live scores, team sheets and stats all run through GCS CricHeroes.</div>'+
-      '<button class="cta" style="width:100%;justify-content:center;box-sizing:border-box" onclick="openGCS()"><i class="ti ti-external-link"></i> Open GCS CricHeroes</button>'+
+      '<div style="font-size:13px;line-height:1.5;color:var(--muted);padding:2px 2px 10px">Watch our live stream and follow the scores, plus individual player stats, wagon wheels and more.</div>'+
+      '<button class="cta" style="width:100%;justify-content:center;box-sizing:border-box" onclick="openGCS()"><i class="ti ti-download"></i> Download it here</button>'+
       '<button class="cta" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:8px;background:rgba(119,119,201,.16);color:#9a9ad6;border:1px solid rgba(119,119,201,.4)" onclick="openScoring()"><i class="ti ti-list-numbers"></i> How to use the GCS Scoring App</button></div>';
     if(officialName){ head+='<div class="readonly" style="justify-content:flex-start;margin:10px 0 2px">'+(officialKind==='umpire'?UMP_SVG:'<i class="ti ti-pencil"></i>')+' '+(officialKind==='umpire'?'Umpire':'Scorer')+' \u00b7 '+esc(officialName)+' <span style="margin-left:auto;color:#9a9ad6;font-weight:700;cursor:pointer" onclick="officialIdentityReset()">Change</span></div>'; }
     if(!ms.length){ host.innerHTML=head+'<div class="readonly" style="justify-content:flex-start;margin-top:12px"><i class="ti ti-info-circle"></i> No matches in the schedule yet.</div>'; return; }
