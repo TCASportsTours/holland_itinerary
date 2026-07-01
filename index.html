@@ -498,14 +498,14 @@
       <div class="hello" id="welcomeTitle">Welcome</div>
       <div class="lead" id="welcomeLead">Choose your team below.</div>
       <div id="teamBtns"></div>
-      <button class="squadopt" id="staffBtn" onclick="staffPrompt()"><span class="dot" style="background:var(--surface);color:#fff"><i class="ti ti-lock"></i></span><span style="flex:1"><b>Staff</b><span>Password required · then choose your team</span></span><i class="ti ti-chevron-right arr"></i></button>
+      <button class="squadopt" id="staffBtn" style="display:none" onclick="staffPrompt()"><span class="dot" style="background:var(--surface);color:#fff"><i class="ti ti-lock"></i></span><span style="flex:1"><b>Staff</b><span>Password required · then choose your team</span></span><i class="ti ti-chevron-right arr"></i></button>
       <div class="staffpanel" id="staffPanel" style="display:none">
         <input id="staffPass" type="password" placeholder="Staff password" autocomplete="off" onkeydown="if(event.key==='Enter')staffCheck()">
         <button class="cta" style="width:100%;justify-content:center;margin-top:9px" onclick="staffCheck()"><i class="ti ti-login-2"></i> Enter staff view</button>
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bm · rollcall-today-only</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bn · signin-no-staff-flash</div>
     </section>
 
     <!-- TODAY -->
