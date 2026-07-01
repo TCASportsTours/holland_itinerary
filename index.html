@@ -505,7 +505,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bb · drop-alert-share</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bf · logout-ts-only</div>
     </section>
 
     <!-- TODAY -->
@@ -611,7 +611,7 @@
     <section class="screen" id="s-officials">
       <div class="eyebrow" style="color:#9a9ad6;margin-top:6px"><i class="ti ti-whistle"></i> Scorer / umpire &mdash; all matches</div>
       <div id="offMatchList"></div>
-      <button class="squadopt" style="margin-top:16px;opacity:.85" onclick="logOut()"><span class="dot" style="background:var(--surface);color:#fff"><i class="ti ti-logout"></i></span><span style="flex:1"><b>Sign out</b></span><i class="ti ti-chevron-right arr"></i></button>
+      <button class="squadopt" id="offSignOutBtn" style="margin-top:16px;opacity:.85;display:none" onclick="logOut()"><span class="dot" style="background:var(--surface);color:#fff"><i class="ti ti-logout"></i></span><span style="flex:1"><b>Sign out</b></span><i class="ti ti-chevron-right arr"></i></button>
     </section>
     <section class="screen" id="s-omatch">
       <button class="backbtn" onclick="showOfficials()"><i class="ti ti-chevron-left"></i> All matches</button>
@@ -1072,6 +1072,7 @@
     if(isStaff || role==='supporter') clearPlayer();   // don't let a previously-saved player auto-resume after signing in as staff/supporter
     document.querySelector('.phone').classList.remove('locked');
     document.getElementById('moreSquad').textContent= isAdmin ? 'Tournament staff \u00b7 all teams' : (sq + (isStaff? (currentPlayer?' · '+currentPlayer+' (Staff)':' · Staff') : (role==='supporter'?' · Supporter':(currentPlayer?' · '+currentPlayer:''))));
+    var _sw=document.getElementById('switchTeamBtn'), _lo=document.getElementById('logoutBtn'); if(_sw) _sw.style.display=isAdmin?'':'none'; if(_lo) _lo.style.display=isAdmin?'':'none';
     var crest=document.getElementById('hubCrest'); if(crest){ var lg=(TEAMLOGOS||{})[sq]||SETTINGS.badge; if(lg) crest.src=lg; }
     var sqTile=document.getElementById('squadTile'); if(sqTile) sqTile.style.display=isStaff?'':'none';
     ['voteTile','alertTile'].forEach(function(id){ var t=document.getElementById(id); if(t) t.style.display=isStaff?'':'none'; });
@@ -1080,7 +1081,7 @@
     var ani=document.getElementById('alertNavIcon'); if(ani) ani.className='ti '+(isStaff?'ti-send':'ti-bell');
     var anb=document.getElementById('alertNavBtn'); if(anb) anb.setAttribute('aria-label', isStaff?'Send an alert':'Alerts');
     var ht=document.getElementById('hotelTile'); if(ht){ var hasHotel = isSupporter() ? !!(SETTINGS.supporterHotel||SETTINGS.supporterHotelAddress) : !!(SETTINGS&&SETTINGS.hotelAddress); ht.style.display=hasHotel?'':'none'; }
-    var sw=document.getElementById('switchTeamBtn'); if(sw) sw.style.display=(role==='player')?'none':'';   // players are locked into their squad
+    var sw=document.getElementById('switchTeamBtn'); if(sw) sw.style.display=isAdmin?'':'none';   // only tournament staff can switch team / log out
     ciInit();renderToday();renderMore();go('today');loadWeather();startAlerts();startLiveClock();fetchLineups(renderToday);
     saveSession();
   }
@@ -1104,19 +1105,31 @@
   /* ===== Staff: send an alert from inside the app (mirrors the admin) ===== */
   function openSendAlert(){
     if(!isStaff) return;
-    var team=currentSquad;
-    var players=((PLAYERS||{})[team]||[]).filter(function(n){return n&&n.trim();});
-    var opts='<option value="team::'+esc(team)+'">'+esc(team)+' \u2014 whole team</option>';
-    if(players.length){
-      opts+='<optgroup label="Just one player">';
-      players.forEach(function(p){ opts+='<option value="player::'+esc(team)+'::'+esc(p)+'">'+esc(team)+' \u2014 '+esc(p)+'</option>'; });
-      opts+='</optgroup>';
-    }
-    opts+='<option value="staff">Coaches / managers only</option>';
     var inSty='width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--surface-line);color:#fff;font-family:inherit;font-size:14px;padding:11px 12px;border-radius:10px;color-scheme:dark';
+    var opts, lead;
+    if(isAdmin){
+      opts='<option value="everyone">Everyone (incl. supporters)</option>';
+      opts+='<option value="all">All players &amp; staff</option>';
+      (TEAMS_LIST||[]).forEach(function(t){ if(t) opts+='<option value="team::'+esc(t)+'">'+esc(t)+' \u2014 whole team</option>'; });
+      opts+='<option value="coaches">Team coaches</option>';
+      opts+='<option value="tournament">Tournament staff</option>';
+      opts+='<option value="supporters">All supporters</option>';
+      lead='Choose who should see it \u2014 everyone (including supporters), all players &amp; staff, a single team, the coaches, your fellow tournament staff, or just the supporters. Whoever you pick gets a pop-up the next time their app checks in (within a minute) and it\u2019s saved in their Alerts tab.';
+    } else {
+      var team=currentSquad;
+      var players=((PLAYERS||{})[team]||[]).filter(function(n){return n&&n.trim();});
+      opts='<option value="team::'+esc(team)+'">'+esc(team)+' \u2014 whole team</option>';
+      if(players.length){
+        opts+='<optgroup label="Just one player">';
+        players.forEach(function(p){ opts+='<option value="player::'+esc(team)+'::'+esc(p)+'">'+esc(team)+' \u2014 '+esc(p)+'</option>'; });
+        opts+='</optgroup>';
+      }
+      opts+='<option value="staff">Coaches / managers only</option>';
+      lead='Goes to your team ('+esc(team)+'). Whoever you choose gets a pop-up the next time their app checks in (within a minute) and it\u2019s saved in their Alerts tab. Keep it short and clear.';
+    }
     var h='<div class="travelbox" style="margin-top:8px">'+
       '<div class="th"><i class="ti ti-send"></i> Send an alert</div>'+
-      '<div style="font-size:13px;line-height:1.55;color:var(--muted);padding:2px 2px 12px">Goes to your team ('+esc(team)+'). Whoever you choose gets a pop-up the next time their app checks in (within a minute) and it\u2019s saved in their Alerts tab. Keep it short and clear.</div>'+
+      '<div style="font-size:13px;line-height:1.55;color:var(--muted);padding:2px 2px 12px">'+lead+'</div>'+
       '<div class="eyebrow" style="margin:2px 0 6px">Who should see it?</div>'+
       '<select id="alertAud" class="darksel" style="'+inSty+';margin-bottom:12px">'+opts+'</select>'+
       '<div class="eyebrow" style="margin:2px 0 6px">Message</div>'+
@@ -1137,7 +1150,7 @@
   }
   function parseAud(raw){
     raw=raw||'';
-    if(raw==='all'||raw==='staff'||raw==='supporters') return {team:raw};
+    if(raw==='all'||raw==='everyone'||raw==='staff'||raw==='supporters'||raw==='coaches'||raw==='tournament') return {team:raw};
     if(raw.indexOf('player::')===0){ var p=raw.split('::'); return {team:p[1], player:p.slice(2).join('::')}; }
     if(raw.indexOf('team::')===0) return {team:raw.substring(6)};
     return {team:raw};
@@ -3308,10 +3321,13 @@
       return (a.offNames||[]).map(function(s){return String(s).toLowerCase();}).indexOf(String(officialName).toLowerCase())>=0;
     }
     if(a.team==='officials') return false;             // non-officials never see officials messages
+    if(a.team==='everyone') return true;               // literally everyone on tour, incl. supporters
     if(a.team==='supporters') return isSupporter();    // supporters only ever get an alert aimed at supporters
     if(isSupporter()) return false;                    // ...and nothing else
     if(a.team==='all') return true;                    // everyone else: all players + staff
     if(a.team==='staff') return isStaff;
+    if(a.team==='coaches') return isStaff && !isAdmin; // team coaches/managers only
+    if(a.team==='tournament') return isAdmin;          // tournament staff only
     if(a.team!==currentSquad) return false;            // a different squad
     if(a.player) return a.player===currentPlayer;      // player-targeted: only that player
     return true;                                       // whole-team alert (players + staff in the squad)
@@ -3319,7 +3335,10 @@
   function alertAudLabel(a){
     if(!a) return '';
     if(a.team==='all') return 'Everyone (players & staff)';
+    if(a.team==='everyone') return 'Everyone incl. supporters';
     if(a.team==='staff') return 'Coaches / managers';
+    if(a.team==='coaches') return 'Team coaches';
+    if(a.team==='tournament') return 'Tournament staff';
     if(a.team==='supporters') return 'All supporters';
     if(a.team==='officials') return 'Umpires & scorers';
     if(a.player) return a.team+' \u00b7 '+a.player;
@@ -3354,9 +3373,19 @@
       '<button class="rollbtn" onclick="event.stopPropagation();openAlertLink('+idArg+')"><i class="ti ti-external-link"></i> Open post</button>'+
     '</div>';
   }
+  function clearAllAlertsApp(){
+    if(!isAdmin) return;
+    if(!confirm('Clear ALL alerts for everyone? This removes every alert from every phone and can\u2019t be undone.')) return;
+    fetch('/.netlify/functions/tour?type=alerts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify([])})
+      .then(function(r){return r.json();}).then(function(j){
+        if(j&&j.ok){ ALERTS=[]; toast('All alerts cleared'); renderAlertsFeed(); }
+        else toast('Couldn\u2019t clear \u2014 try again');
+      }).catch(function(){ toast('Couldn\u2019t clear \u2014 check your connection'); });
+  }
   function renderAlertsFeed(){
     var host=document.getElementById('alertFeed'); if(!host) return;
-    var head = isStaff ? '<button class="cibig cibig-go" style="margin:0 0 14px" onclick="openSendAlert()"><i class="ti ti-send"></i> Send an alert</button>' : '';
+    var head = isStaff ? '<button class="cibig cibig-go" style="margin:0 0 10px" onclick="openSendAlert()"><i class="ti ti-send"></i> Send an alert</button>' : '';
+    if(isAdmin && (ALERTS||[]).length) head += '<button class="cibig" style="margin:0 0 14px;color:#ff8a8a" onclick="clearAllAlertsApp()"><i class="ti ti-trash"></i> Clear all alerts</button>';
     var mine=(ALERTS||[]).filter(alertRelevant);       // newest first (sender unshifts)
     if(!mine.length){ host.innerHTML=head+'<div class="readonly" style="justify-content:flex-start"><i class="ti ti-bell-off"></i> No alerts yet \u2014 messages from tour staff will appear here.</div>'; return; }
     host.innerHTML=head+mine.map(function(a){
