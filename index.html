@@ -505,7 +505,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bj · welcome-labels-only</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bk · welcome-sublines</div>
     </section>
 
     <!-- TODAY -->
@@ -3241,14 +3241,14 @@
     var sp=document.getElementById('staffPanel'); if(sp) sp.style.display='none';
     var sb=document.getElementById('staffBtn'); if(sb) sb.style.display='none';
     var host=document.getElementById('teamBtns'); if(!host) return; host.innerHTML=
-      roleBtn('player','ti-user','Player','See your team\u2019s schedule, vote & order meals')+
-      roleBtn('supporter','ti-users','Supporter / parent','Follow a team\u2019s schedule, weather & info')+
-      roleBtn('staff','ti-lock','Team management / coaches','Password required \u00b7 full access')+
-      roleBtn('admin','ti-shield-lock','Tournament staff','All teams & players \u00b7 password')+
-      roleBtn('official','ti-whistle','Scorer / umpire','Matches, squads & batting orders');
+      roleBtn('player','ti-user','Player','Batting orders, Players\u2019 Player votes, meal picks and bus times \u2014 it\u2019s all in here.')+
+      roleBtn('supporter','ti-users','Supporter / parent','From the itinerary to packing lists and paperwork \u2014 everything you need, none of the panic.')+
+      roleBtn('staff','ti-lock','Team management / coaches','Your detailed itinerary, batting-order tools, group messaging and more \u2014 mission control for your squad.')+
+      roleBtn('admin','ti-shield-lock','Tournament staff','')+
+      roleBtn('official','ti-whistle','Scorer / umpire','');
   }
   function roleBtn(r,icon,title,sub){
-    return '<button class="squadopt" onclick="chooseRole(\''+r+'\')"><span class="dot" style="background:var(--surface);color:#fff"><i class="ti '+icon+'"></i></span><span style="flex:1"><b>'+title+'</b></span><i class="ti ti-chevron-right arr"></i></button>';
+    return '<button class="squadopt" onclick="chooseRole(\''+r+'\')"><span class="dot" style="background:var(--surface);color:#fff"><i class="ti '+icon+'"></i></span><span style="flex:1"><b>'+title+'</b>'+(sub?'<span>'+sub+'</span>':'')+'</span><i class="ti ti-chevron-right arr"></i></button>';
   }
   function chooseRole(r){
     if(r==='official'){ staffPending=false; _adminPending=false; pendingRole='official'; officialPrompt(); return; }
