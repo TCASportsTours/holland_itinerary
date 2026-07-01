@@ -505,7 +505,7 @@
         <div class="err" id="staffErr">That password isn't right. Try again.</div>
       </div>
       <button class="a2hslink" id="a2hsLink" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>
-      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bg · controls-tab-gcs-live</div>
+      <div style="text-align:center;font-size:10px;color:var(--faint);margin-top:22px;letter-spacing:.04em">Build 2026‑06‑24bj · welcome-labels-only</div>
     </section>
 
     <!-- TODAY -->
@@ -782,7 +782,7 @@
   function lineupBtn(e){
     if(!isMatch(e)) return '';
     var lu=(LINEUPS||{})[lineupKey(e)], has=lu&&lu.order&&lu.order.length;
-    if(isStaff && !isAdmin){
+    if(isStaff && !isAdmin && coachOwnsFixture(e)){
       var roster=((PLAYERS||{})[currentSquad]||[]).filter(function(n){return n&&n.trim();});
       if(!roster.length) return '';                                 // no squad -> nothing to order
       var label = has ? ('Batting order \u00b7 '+lu.order.length) : 'Set batting order';
@@ -1078,7 +1078,7 @@
     ['voteTile','alertTile'].forEach(function(id){ var t=document.getElementById(id); if(t) t.style.display=isStaff?'':'none'; });
     var mt=document.getElementById('mealTile'); if(mt) mt.style.display=(isStaff && MEALS && MEALS.length)?'':'none';
     var rt=document.getElementById('rulesTile'); if(rt) rt.style.display=hasVal(SETTINGS.rulesUrl)?'':'none';
-    var ani=document.getElementById('alertNavIcon'); if(ani) ani.className='ti '+(isStaff?'ti-send':'ti-bell');
+    var ani=document.getElementById('alertNavIcon'); if(ani) ani.className='ti ti-bell';
     var anb=document.getElementById('alertNavBtn'); if(anb) anb.setAttribute('aria-label', isStaff?'Send an alert':'Alerts');
     var ht=document.getElementById('hotelTile'); if(ht){ var hasHotel = isSupporter() ? !!(SETTINGS.supporterHotel||SETTINGS.supporterHotelAddress) : !!(SETTINGS&&SETTINGS.hotelAddress); ht.style.display=hasHotel?'':'none'; }
     var sw=document.getElementById('switchTeamBtn'); if(sw) sw.style.display=isAdmin?'':'none';   // only tournament staff can switch team / log out
@@ -1127,6 +1127,16 @@
       opts+='<option value="staff">Coaches / managers only</option>';
       lead='Goes to your team ('+esc(team)+'). Whoever you choose gets a pop-up the next time their app checks in (within a minute) and it\u2019s saved in their Alerts tab. Keep it short and clear.';
     }
+    if(!isAdmin) _staffPhotoData=null;
+    var media = isAdmin ? (
+      '<div class="eyebrow" style="margin:14px 0 6px">Photo (optional)</div>'+
+      '<input type="file" id="saPhotoFile" accept="image/*" style="display:none" onchange="pickStaffPhoto(this.files[0]); this.value=\'\';">'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" onclick="document.getElementById(\'saPhotoFile\').click()" style="background:var(--surface);border:1px solid var(--surface-line);color:#fff;font-family:inherit;font-size:13px;font-weight:600;padding:10px 14px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i class="ti ti-photo"></i> Add photo</button><span id="saPhotoName" style="font-size:12px;color:var(--muted)"></span></div>'+
+      '<div id="saPhotoPrev" style="display:none;margin-top:10px"><img id="saPhotoImg" alt="Preview" style="max-width:160px;border-radius:10px;display:block;border:1px solid var(--surface-line)"><button type="button" onclick="clearStaffPhoto()" style="margin-top:8px;background:none;border:0;color:#ff8a8a;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><i class="ti ti-x"></i> Remove photo</button></div>'+
+      '<div class="eyebrow" style="margin:14px 0 6px">Link (optional)</div>'+
+      '<input id="saLink" placeholder="e.g. your Instagram post link" style="'+inSty+'">'+
+      '<div style="display:flex;gap:7px;font-size:11px;color:var(--faint);margin:9px 2px 0;line-height:1.5"><i class="ti ti-info-circle" style="color:#9a9ad6;font-size:14px;flex:none;margin-top:1px"></i><span>A link adds an <b>Open post</b> button that takes people straight to your post. Only send photos you\u2019re happy to share with everyone the alert reaches.</span></div>'
+    ) : '';
     var h='<div class="travelbox" style="margin-top:8px">'+
       '<div class="th"><i class="ti ti-send"></i> Send an alert</div>'+
       '<div style="font-size:13px;line-height:1.55;color:var(--muted);padding:2px 2px 12px">'+lead+'</div>'+
@@ -1134,13 +1144,7 @@
       '<select id="alertAud" class="darksel" style="'+inSty+';margin-bottom:12px">'+opts+'</select>'+
       '<div class="eyebrow" style="margin:2px 0 6px">Message</div>'+
       '<textarea id="alertMsg2" rows="4" placeholder="e.g. Coach leaves at 8:30 sharp \u2014 be in reception by 8:20." style="'+inSty+';resize:vertical"></textarea>'+
-      '<div class="eyebrow" style="margin:14px 0 6px">Photo (optional)</div>'+
-      '<input type="file" id="saPhotoFile" accept="image/*" style="display:none" onchange="pickStaffPhoto(this.files[0]); this.value=\'\';">'+
-      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" onclick="document.getElementById(\'saPhotoFile\').click()" style="background:var(--surface);border:1px solid var(--surface-line);color:#fff;font-family:inherit;font-size:13px;font-weight:600;padding:10px 14px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i class="ti ti-photo"></i> Add photo</button><span id="saPhotoName" style="font-size:12px;color:var(--muted)"></span></div>'+
-      '<div id="saPhotoPrev" style="display:none;margin-top:10px"><img id="saPhotoImg" alt="Preview" style="max-width:160px;border-radius:10px;display:block;border:1px solid var(--surface-line)"><button type="button" onclick="clearStaffPhoto()" style="margin-top:8px;background:none;border:0;color:#ff8a8a;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><i class="ti ti-x"></i> Remove photo</button></div>'+
-      '<div class="eyebrow" style="margin:14px 0 6px">Link (optional)</div>'+
-      '<input id="saLink" placeholder="e.g. your Instagram post link" style="'+inSty+'">'+
-      '<div style="display:flex;gap:7px;font-size:11px;color:var(--faint);margin:9px 2px 0;line-height:1.5"><i class="ti ti-info-circle" style="color:#9a9ad6;font-size:14px;flex:none;margin-top:1px"></i><span>A link adds an <b>Open post</b> button that takes people straight to your post. Only send photos you\u2019re happy to share with everyone the alert reaches.</span></div>'+
+      media+
       '<button class="cta" onclick="sendStaffAlert()" style="width:100%;justify-content:center;box-sizing:border-box;margin-top:14px"><i class="ti ti-send"></i> Send alert</button>'+
       '</div>';
     document.getElementById('detailBody').innerHTML=h;
@@ -1290,6 +1294,8 @@
   function pNumBadge(name,team){ var n=pNum(name,team); return n?'<span class="snum">'+esc(n)+'</span>':''; }
   function lineupKeyFor(team,e){ return team+'|'+eventKey(e); }
   function lineupKey(e){ return lineupKeyFor(currentSquad,e); }
+  function fixtureTeams(e){ var t=(e&&e.teams&&e.teams.length)?e.teams:[e&&e.teamA,e&&e.teamB]; return (t||[]).filter(function(x){return x&&String(x).trim();}); }
+  function coachOwnsFixture(e){ var t=fixtureTeams(e); return t.length ? (t.indexOf(currentSquad)>=0) : (!!e && e.sq===currentSquad); }
   function swimMeta(s){
     var k=String(s||'').trim().toLowerCase();
     if(k==='strong') return {c:'#51cea7',label:'Strong swimmer',i:'ti-swimming'};
@@ -1385,8 +1391,14 @@
       h+='<div class="eyebrow" style="margin-top:16px;color:#7bdcc0"><i class="ti ti-list-numbers"></i> '+esc(currentSquad)+' batting order</div>';
       h+=lineupOrderHTML(currentSquad,lu.order);
     }
-    if(isStaff&&!isAdmin) h+='<button class="cibig" onclick="openLineup('+e._i+')"><i class="ti ti-list-numbers"></i> '+(has?'Edit batting order':'Set batting order')+'</button>';
-    if(has&&isStaff&&!isAdmin) h+=lineupShareSection(e);
+    if(isStaff&&!isAdmin){
+      if(coachOwnsFixture(e)){
+        h+='<button class="cibig" onclick="openLineup('+e._i+')"><i class="ti ti-list-numbers"></i> '+(has?'Edit batting order':'Set batting order')+'</button>';
+        if(has) h+=lineupShareSection(e);
+      } else if(isMatch(e)){
+        h+='<div class="readonly" style="justify-content:flex-start;margin-top:12px;color:var(--muted)"><i class="ti ti-info-circle"></i> Batting order opens once '+esc(currentSquad)+' is confirmed in this fixture.</div>';
+      }
+    }
     host.innerHTML=h;
   }
   function openLineupView(i){
@@ -1410,7 +1422,7 @@
     });
   }
   function openLineup(i){
-    var e=EVENTS[i]; if(!e||!isStaff||isAdmin) return;
+    var e=EVENTS[i]; if(!e||!isStaff||isAdmin||!coachOwnsFixture(e)) return;
     _lineupEvent=e; _lineupKey=lineupKey(e);
     fetchLineups(function(){
       var lu=LINEUPS[_lineupKey]; _lineup=(lu&&Array.isArray(lu.order))?lu.order.slice():[];
@@ -3208,7 +3220,7 @@
     if(!s || !s.role) return;                                                                       // nothing saved -> welcome
     try{
       if(s.role==='official'){ signInOfficial(s.officialKind||'', s.officialName||''); return; }
-      if(s.role==='admin'){
+      if(s.role==='admin' || s.isAdmin){
         if(!(TEAMS_LIST||[]).length) return;
         isAdmin=true; currentPlayer='';
         signIn((s.team&&TEAMS_LIST.indexOf(s.team)>=0)?s.team:TEAMS_LIST[0], true); return;
@@ -3231,12 +3243,12 @@
     var host=document.getElementById('teamBtns'); if(!host) return; host.innerHTML=
       roleBtn('player','ti-user','Player','See your team\u2019s schedule, vote & order meals')+
       roleBtn('supporter','ti-users','Supporter / parent','Follow a team\u2019s schedule, weather & info')+
-      roleBtn('staff','ti-lock','Staff / coach','Password required \u00b7 full access')+
+      roleBtn('staff','ti-lock','Team management / coaches','Password required \u00b7 full access')+
       roleBtn('admin','ti-shield-lock','Tournament staff','All teams & players \u00b7 password')+
       roleBtn('official','ti-whistle','Scorer / umpire','Matches, squads & batting orders');
   }
   function roleBtn(r,icon,title,sub){
-    return '<button class="squadopt" onclick="chooseRole(\''+r+'\')"><span class="dot" style="background:var(--surface);color:#fff"><i class="ti '+icon+'"></i></span><span style="flex:1"><b>'+title+'</b><span>'+sub+'</span></span><i class="ti ti-chevron-right arr"></i></button>';
+    return '<button class="squadopt" onclick="chooseRole(\''+r+'\')"><span class="dot" style="background:var(--surface);color:#fff"><i class="ti '+icon+'"></i></span><span style="flex:1"><b>'+title+'</b></span><i class="ti ti-chevron-right arr"></i></button>';
   }
   function chooseRole(r){
     if(r==='official'){ staffPending=false; _adminPending=false; pendingRole='official'; officialPrompt(); return; }
@@ -3307,14 +3319,14 @@
     resumeSession();
   }
   /* ===== Team alerts: pop up and must be acknowledged ===== */
-  var ALERTS=[], curAlert=null, alertTimer=null, ALERT_TTL_MS=6*60*60*1000;
+  var ALERTS=[], curAlert=null, alertTimer=null, ALERT_TTL_MS=12*60*60*1000;
   function alertFresh(a){ return !(a&&a.ts&&(Date.now()-a.ts)>ALERT_TTL_MS); }
   function ackedSet(){ try{return JSON.parse(localStorage.getItem('gcs_acked')||'[]');}catch(e){return [];} }
   function ackId(id){ try{var a=ackedSet(); if(a.indexOf(id)<0){a.push(id); localStorage.setItem('gcs_acked',JSON.stringify(a.slice(-150)));}}catch(e){} }
   function ago(ts){ if(!ts)return''; var s=Math.floor((Date.now()-ts)/1000); if(s<60)return'just now'; var m=Math.floor(s/60); if(m<60)return m+' min ago'; var h=Math.floor(m/60); if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago'; }
   function alertRelevant(a){
     if(!a) return false;
-    if(!alertFresh(a)) return false;                   // alerts disappear 6h after posting
+    if(!alertFresh(a)) return false;                   // alerts disappear 12h after posting
     if(isOfficial()){                                  // officials only ever get messages aimed at officials
       if(a.team!=='officials') return false;
       if(!officialName) return true;                   // signed in without a name: sees every officials message
